@@ -102,3 +102,25 @@ O sistema utiliza o MongoDB para armazenar todos os dados persistentes, organiza
   "historico_pagamento": [ ... ],
   "itens_adquiridos": ["ESPADA_LENDARIA_SKIN"]
 }
+````
+1.  **Instale as dependências (via Maven):**
+    ```bash
+    mvn clean install
+    ```
+
+3.  **Execute a aplicação:**
+    ```bash
+    mvn spring-boot:run
+    ```
+
+O servidor estará rodando em `http://localhost:8080`.
+
+## 🧑‍💻 Equipe
+
+Este projeto está sendo desenvolvido por:
+
+* Raul Gruenwaldt Antonio
+* João Pedro Pires de Andrade
+* Otávio Rosa Zampolli
+* Fernando Furlanetto Cardoso
+* Matheus Augusto Mendonça
