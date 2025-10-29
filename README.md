@@ -36,7 +36,7 @@ O objetivo principal é criar uma ferramenta de aprendizado onde os estudantes s
 
 ---
 
-## 🏛️ Arquitetura do Backend (Java)
+## 🏛️ Arquitetura do Backend(Pyhton e Java) e Frontend(React)
 
 Conforme definido no documento de requisitos, este servidor Java é responsável por:
 
