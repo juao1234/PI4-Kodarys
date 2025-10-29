@@ -2,7 +2,7 @@
 
 Este repositório contém o código-fonte do **backend** para a Plataforma Gamificada de Aprendizado de Programação, um RPG educacional projetado para ensinar conceitos de programação (Python) de forma lúdica e imersiva.
 
-A aplicação é construída em **Java (Spring Boot)** e utiliza **MongoDB** como banco de dados para gerenciar o progresso dos usuários, a narrativa e os desafios.
+A aplicação é construída em **Java (Spring Boot) e Python** e utiliza **MongoDB** como banco de dados para gerenciar o progresso dos usuários, a narrativa e os desafios.
 
 ## 📖 Sobre o Projeto
 
