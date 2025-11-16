@@ -1,0 +1,165 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.login-page {
+  background-image: url('/images/Imagem_Login.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 100vh;
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+}
+
+.title {
+  font-family: "Merriweather", serif;
+  font-size: 64px;
+  font-weight: 900;
+  color: #ffffff;
+  text-align: center;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+}
+
+.login-card {
+  background: rgba(15, 20, 25, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 40px 50px;
+  width: 500px;
+  max-width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-card h3 {
+  font-family: "Merriweather", serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #FFFFFF;
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.aviso-retorno {
+  font-family: 'Merriweather', serif;
+  font-weight: 400;
+  font-size: 18px;
+  color: #A0A0A0;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.label-form {
+  font-family: 'Merriweather', serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: #FFFFFF;
+  margin-bottom: 8px;
+  margin-top: 10px;
+}
+
+.input-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  width: 100%;
+  height: 50px;
+
+  background: rgba(50, 60, 80, 0.4);
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  transition: border-color 0.3s ease;
+}
+
+.input-box:focus-within {
+  border-color: rgba(74, 144, 226, 0.5);
+}
+
+.input-box img {
+  width: 22px;
+  height: 22px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.input-box input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+
+  font-family: "Merriweather", serif;
+  font-size: 16px;
+  color: white;
+}
+
+.input-box input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.button-adventure {
+  background: linear-gradient(90deg, #3D5AFE 0%, #2B46E0 100%);
+  color: #FFFFFF;
+  font-family: 'Merriweather', serif;
+  font-weight: 700;
+  font-size: 18px;
+  text-align: center;
+
+  border: none;
+  padding: 14px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button-adventure:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(61, 90, 254, 0.4);
+}
+
+.login-card > h3:last-child {
+  font-family: 'Merriweather', serif;
+  font-weight: 400;
+  font-size: 16px;
+  color: #FFFFFF;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.register-text {
+  color: #4A90E2;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.register-text:hover {
+  text-decoration: underline;
+}
+
+.eye-icon {
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+  flex-shrink: 0;
+  transition: opacity 0.3s ease;
+}
+
+.eye-icon:hover {
+  opacity: 1;
+}
