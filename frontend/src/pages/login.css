@@ -7,7 +7,7 @@
 }
 
 .login-page {
-  background-image: url('/images/Imagem_Login.png');
+  background-image: url('/src/assets/images/Imagem_Login.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
