@@ -53,3 +53,7 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+input:active{
+  border:none !important;
+}
