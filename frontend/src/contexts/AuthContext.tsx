@@ -1,15 +1,16 @@
-import React, {createContext, useState, useContext, ReactNode} from "react";
+import {createContext, useState, useContext, ReactNode} from "react";
 
 type User = {
     id: string;
     name: string;
+    classe: string;
     email: string;
-    avatar?: string;
+    avatar?: string | null;
 }
 
 type AuthContextType = {
     user: User | null;
-    signIn: (email: string, password: string) => Promise<void>;
+    signIn: () => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -22,17 +23,27 @@ type AuthProviderProps = {
 export const AuthProvider = ({children}: AuthProviderProps) => {
     const [user, setUser] = useState<User | null>(null);
 
-    const signIn = async (email: string , password: string) => {
+    const signIn = async () => {
         setUser({
             id: "1",
             name: "John Doe",
+            classe: "Guerreiro",
             email: "john.doe@example.com",
             avatar: "https://example.com/avatar.jpg"
         })
+        localStorage.setItem("user", JSON.stringify({
+            id: "1",
+            name: "John Doe",
+            classe: "Guerreiro",
+            email: "john.doe@example.com",
+            avatar: "https://example.com/avatar.jpg"
+        }))
     }
 
     const signOut = async () => {
         setUser(null);
+        localStorage.removeItem("user");
+
     }
 
     return (
