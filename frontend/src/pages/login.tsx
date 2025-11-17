@@ -4,9 +4,22 @@ import KeyIcon from "@mui/icons-material/Key"
 import UserIcon from "@mui/icons-material/Person"
 import EyeIcon from "@mui/icons-material/Visibility"
 import EyeClosedIcon from "@mui/icons-material/VisibilityOff"
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogin = () => {
+    setLoading(true);
+    signIn();
+    navigate("/");
+    setLoading(false);
+  }
 
   return (
     <div className="login-page">
@@ -36,7 +49,11 @@ export default function LoginPage() {
           </div>
           </div>
         </div>
-        <button type="submit" className="bg-blue-500 text-white !p-4 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors hover:-translate-y-1 transition-transform">Entrar na aventura</button>
+        {loading?(
+          <button className="bg-blue-500 text-white !p-4 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors hover:-translate-y-1 transition-transform" disabled={loading}>Carregando...</button>
+        ):(
+          <button onClick={handleLogin} className="bg-blue-500 text-white !p-4 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors hover:-translate-y-1 transition-transform" disabled={loading}>Entrar na aventura</button>
+        )}
         <p className="text-center">Novo por aqui? <a href="/register" className="text-blue-500 cursor-pointer hover:underline hover:text-blue-700 transition-colors">Crie a sua conta</a></p>
       </div>
     </div>
