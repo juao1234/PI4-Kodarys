@@ -1,4 +1,4 @@
-import {createContext, useState, useContext, ReactNode} from "react";
+import {createContext, useState, useContext, ReactNode, useEffect} from "react";
 
 type User = {
     id: string;
@@ -22,7 +22,15 @@ type AuthProviderProps = {
 }
 
 export const AuthProvider = ({children}: AuthProviderProps) => {
+
     const [user, setUser] = useState<User | null>(null);
+    
+    useEffect(() => {
+        const localUser = localStorage.getItem('user');
+        if(localUser) {
+            setUser(JSON.parse(localUser));
+        }
+    }, [])
 
     const signIn = async () => {
         setUser({
