@@ -5,6 +5,7 @@ type User = {
     name: string;
     classe: string;
     email: string;
+    level: number;
     avatar?: string | null;
 }
 
@@ -29,6 +30,7 @@ export const AuthProvider = ({children}: AuthProviderProps) => {
             name: "John Doe",
             classe: "Guerreiro",
             email: "john.doe@example.com",
+            level: 12,
             avatar: "https://example.com/avatar.jpg"
         })
         localStorage.setItem("user", JSON.stringify({
