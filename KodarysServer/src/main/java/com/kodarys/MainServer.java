@@ -1,8 +1,14 @@
 package com.kodarys;
 
-import java.io.*;
-import java.net.*;
-import com.google.gson.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.kodarys.model.Usuario;
 
 public class MainServer {
@@ -37,7 +43,7 @@ public class MainServer {
                         out.println("{\"status\": \"erro\", \"mensagem\": \"JSON inválido.\"}");
                     }
 
-                    System.out.println("Conexão encerrada.\n");
+                    System.out.println("Deu bom.\n");
                 }
             }
         } catch (IOException e) {
