@@ -6,7 +6,7 @@ import { Separator } from "./Separator";
 export default function Navbar() {
     let { user } = useAuth();
 
-    let [activate, setActivate] = useState(false);
+    const [activate] = useState(false);
 
     useEffect(() => {
         user = JSON.parse(localStorage.getItem("user")!)
