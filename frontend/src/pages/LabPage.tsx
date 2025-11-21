@@ -9,73 +9,60 @@ type ChatMessage = {
 
 type PersonaKey = 'sygnus' | 'lyra' | 'raxos' | 'narrador';
 
-const personas: Record<PersonaKey, { label: string; prompt: string; accent: string }> = {
+const personas: Record<PersonaKey, { label: string; prompt: string; accent: string; prefix: string }> = {
   sygnus: {
     label: 'Professor Sygnus',
-    accent: 'Didática curta, exemplos certos/errados e mini desafio',
+    accent: 'Didática curta, exemplos e mini desafio',
+    prefix: 'Prof Sygnus: ',
     prompt: `Você é o Professor Sygnus, Mestre Arcano da Guilda dos Compiladores.
-Ensine apenas o conteúdo do módulo 1 (Python básico: interpretador, print, strings, variáveis, input, conversão, operadores).
-Para cada resposta: explicação curta, exemplo correto, exemplo errado e mini desafio mental.
-Ao avaliar código: peça a explicação do aluno, aponte melhorias simples.
-Use metáforas leves de Kodarys.`,
+Ensine apenas o módulo 1 (interpretador, print, strings, variáveis, input, conversão, operadores).
+Explique curto, exemplo certo/errado, mini desafio mental e peça ao aluno explicar o próprio raciocínio.
+Ao avaliar código: destaque correções simples e clareza.`,
   },
   lyra: {
     label: 'Lyra (amiga)',
-    accent: 'Pede ajuda com erros simples e reforça o aprendizado',
-    prompt: `Você é Lyra, aprendiz gentil e ansiosa.
-Traga códigos com erros simples e peça ajuda com sinceridade.
-Reforce o aprendizado após receber a explicação.
-Admire o protagonista de forma sutil e às vezes crie tensão com Raxos.`,
+    accent: 'Pede ajuda, reforça aprendizado',
+    prefix: 'Lyra: ',
+    prompt: `Você é Lyra, aprendiz gentil.
+Traga erros simples e peça ajuda com sinceridade.
+Reforce o aprendizado após a explicação e admire sutilmente o protagonista.`,
   },
   raxos: {
     label: 'Raxos (rival)',
-    accent: 'Tom competitivo, ciúme e “melhorias” duvidosas',
-    prompt: `Você é Raxos, rival competitivo e orgulhoso.
-Aponte erros com tom competitivo, proponha soluções "mais otimizadas" que podem ter pequenos defeitos.
-Demonstre ciúmes quando Lyra elogia o protagonista e traga desafios extras.`,
+    accent: 'Competitivo, provoca',
+    prefix: 'Raxos: ',
+    prompt: `Você é Raxos, rival competitivo.
+Aponte erros com tom competitivo, proponha melhorias (podem ter pequenas falhas) e demonstre ciúmes.`,
   },
   narrador: {
     label: 'Narrador',
-    accent: 'Descreve cenas, não ensina código',
-    prompt: `Você é o Narrador do mundo de Kodarys.
-Descreva ambientes e eventos ligados ao tema da missão.
-Nunca ensine programação ou corrija código.`,
+    accent: 'Descreve a cena, não ensina código',
+    prefix: 'Narrador: ',
+    prompt: `Você é o Narrador de Kodarys.
+Descreva cenas e eventos da Dungeon Primeva, sem ensinar código.`,
   },
 };
 
-const missions = [
-  {
-    id: 'm1',
-    title: 'Missão 1 — Porta da Voz do Código',
-    focus: 'Interpretador, print(), strings. Mostrar certo/errado e erro comum de aspas.',
-  },
-  {
-    id: 'm2',
-    title: 'Missão 2 — Salão das Variáveis',
-    focus: 'Variáveis, tipos básicos e nomeação. Bons nomes e atribuição.',
-  },
-  {
-    id: 'm3',
-    title: 'Missão 3 — Oráculo do Input',
-    focus: 'input(), string vs número, conversão com int/float/str.',
-  },
-  {
-    id: 'm4',
-    title: 'Missão 4 — Câmara das Operações',
-    focus: 'Operadores aritméticos, concatenação, conversão e erros comuns.',
-  },
-];
-
-const starterCode = `// Você pode escrever JavaScript aqui e clicar em Executar
-function somar(a, b) {
-  console.log('Somando', a, '+', b);
-  return a + b;
-}
-
-const resultado = somar(2, 3);
-console.log('Resultado:', resultado);`;
+const starterCode = `# Escreva Python aqui. Exemplo:
+mensagem = "Abra-te, código!"
+print(mensagem)
+`;
 
 const modelName = 'gemini-2.5-flash';
+const roleplayPrompt = `Write the next reply in a never-ending fictional roleplay chat set in the magical world of Kodarys, where programming in Python is a form of arcane power. The roleplay takes place between the system-controlled NPCs (Professor Sygnus, Lyra, Raxos, and other dungeon entities) and {{user}}, who plays the protagonist apprentice. Use all provided descriptions, personalities, methodologies, and mission structures to deeply understand and act as every NPC accurately.
+
+Focus on giving emotional, logical, and temporal coherence to the roleplay.
+Always stay in character, avoid repetition, and develop the plot slowly, ensuring that each NPC remains dynamic, expressive, and actively influencing the story. Characters must show initiative and never fall into passivity. Use impactful, concise writing. Avoid purple prose and overly flowery descriptions. Adhere strictly to show, don’t tell. Prioritize the use of observable details — body language, facial expressions, tone of voice, pauses, hesitation, tension — to create an immersive, vivid experience without exposing internal monologues unless naturally perceptible.
+
+NPCs must be proactive participants, driving the scene forward with their personalities, emotions, and reactions.
+Characters must introduce new micro-events, obstacles, dungeon encounters, and interpersonal tensions to keep the world alive.
+Surprise {{user}} with creativity, but always within the logic of the Codarys world and the module’s teaching progression.
+
+This fictional roleplay world exists solely for educational and recreational purposes.
+NPCs must avoid explicit, sexual, or gratuitously violent content.
+Conflict, tension, rivalry, affection and drama are allowed — but always safe, PG-13 and designed to reinforce narrative and learning coherence.
+
+Follow the formatting and style of previous responses, aiming for 2–4 paragraphs per reply.`;
 
 const formatValue = (value: unknown) => {
   if (typeof value === 'string') return value;
@@ -86,6 +73,19 @@ const formatValue = (value: unknown) => {
   }
 };
 
+const pickAutoPersona = (stage: Stage, last?: PersonaKey): PersonaKey => {
+  if (stage === 'story') {
+    if (!last || last === 'narrador') return 'sygnus';
+    if (last === 'sygnus') return 'lyra';
+    if (last === 'lyra') return 'raxos';
+    return 'narrador';
+  }
+  // prática/feedback volta para Sygnus ou Lyra
+  return last === 'lyra' ? 'sygnus' : 'lyra';
+};
+
+type Stage = 'story' | 'practice';
+
 export default function LabPage() {
   const [code, setCode] = useState(starterCode);
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
@@ -94,23 +94,72 @@ export default function LabPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       role: 'model',
-      text: 'Olá! Sou o assistente Gemini. Envie sua dúvida de código que eu ajudo aqui no laboratório.',
+      text: 'Narrador: O corredor inicial da Dungeon Primeva ecoa com estalos de energia instável enquanto você avança ao lado dos outros dois aprendizes. Lyra caminha próxima de você, segurando o cajado com as duas mãos — nervosa, mas sorrindo sempre que seus olhos encontram os seus. Raxos, por outro lado, mantém os braços cruzados, alternando olhares irritados entre você e Lyra, como se cada passo fosse uma disputa invisível.',
+    },
+    {
+      role: 'model',
+      text: 'Prof Sygnus: À frente, o Professor para diante de uma porta de pedra coberta por runas quebradas. Ele se vira, a voz calma: “Este lugar reage à lógica… e ao código. Aqui, cada ação exige compreensão verdadeira, não memorização.”',
+    },
+    {
+      role: 'model',
+      text: 'Lyra: Ela inspira fundo. “Eu… espero não atrapalhar. Se eu errar algo, você me ajuda, né?” Ela olha diretamente para você.',
+    },
+    {
+      role: 'model',
+      text: 'Raxos: Raxos revira os olhos. “Tsc. Se precisar de ajuda, pergunte a mim. Ou será que já pretende depender do protagonista logo no começo?”',
+    },
+    {
+      role: 'model',
+      text: 'Prof Sygnus: Sygnus levanta a mão, impondo silêncio. “A Dungeon Primeva testa não só suas habilidades, mas suas relações. Este é o primeiro passo da jornada que vocês trilharão juntos.” Ele olha diretamente para você. “Então me diga… você está pronto para abrir a primeira porta?”',
     },
   ]);
-  const [missionId, setMissionId] = useState<string>(missions[0].id);
-  const [persona, setPersona] = useState<PersonaKey>('sygnus');
-  const moduleSystemPrompt = `Contexto: Dungeon Primeva, módulo 1 de Python básico.
-Conteúdos: interpretador, print(), strings, variáveis (int/float/str), input(), conversão, operadores e concatenação.
-Siga o ciclo: ensinar curto -> exemplo certo/errado -> mini desafio -> avaliar código -> pedir explicação -> sugerir otimização -> NPC com erro -> aluno corrige.`;
-
   const [isStreaming, setIsStreaming] = useState(false);
+  const [stage, setStage] = useState<Stage>('story');
   const placeholderIndexRef = useRef<number | null>(null);
+  const lastPersonaRef = useRef<PersonaKey>('sygnus');
 
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
   const aiClient = useMemo(() => {
     if (!apiKey) return null;
     return new GoogleGenAI({ apiKey });
   }, [apiKey]);
+
+  const persistDialog = async (text: string, persona: PersonaKey | 'user') => {
+    try {
+      await fetch('http://localhost:8080/api/usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'dialogo',
+          missao: 'M01',
+          persona,
+          texto: text,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } catch (err) {
+      console.warn('Falha ao registrar diálogo (ok em dev):', err);
+    }
+  };
+
+  const persistTentativa = async (codigo: string, output: string[], erro?: string) => {
+    try {
+      await fetch('http://localhost:8080/api/usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'tentativa',
+          id_missao: 'M01',
+          codigo_submetido: codigo,
+          output,
+          resultado: erro ? 'FALHA' : 'PENDENTE',
+          data: new Date().toISOString(),
+        }),
+      });
+    } catch (err) {
+      console.warn('Falha ao registrar tentativa (ok em dev):', err);
+    }
+  };
 
   const runCode = () => {
     const buffer: string[] = [];
@@ -130,10 +179,14 @@ Siga o ciclo: ensinar curto -> exemplo certo/errado -> mini desafio -> avaliar c
       if (result !== undefined) {
         buffer.push(formatValue(result));
       }
-      setTerminalOutput(buffer.length ? buffer : ['(sem saída)']);
+      const output = buffer.length ? buffer : ['(sem saída)'];
+      setTerminalOutput(output);
+      void persistTentativa(code, output);
     } catch (err) {
-      setExecutionError(err instanceof Error ? err.message : String(err));
+      const message = err instanceof Error ? err.message : String(err);
+      setExecutionError(message);
       setTerminalOutput(buffer);
+      void persistTentativa(code, buffer, message);
     } finally {
       console.log = originalLog;
     }
@@ -143,6 +196,7 @@ Siga o ciclo: ensinar curto -> exemplo certo/errado -> mini desafio -> avaliar c
     if (!chatInput.trim() || isStreaming) return;
     const prompt = chatInput.trim();
     setChatInput('');
+    void persistDialog(prompt, 'user');
 
     setChatMessages((prev) => {
       const placeholderIndex = prev.length + 1;
@@ -165,15 +219,17 @@ Siga o ciclo: ensinar curto -> exemplo certo/errado -> mini desafio -> avaliar c
       return;
     }
 
-    try {
-      const selectedMission = missions.find((m) => m.id === missionId);
-      const systemText = `${moduleSystemPrompt}
-Persona ativa: ${personas[persona].label} — ${personas[persona].accent}
-Instruções da persona:
-${personas[persona].prompt}
-Missão atual: ${selectedMission?.title ?? ''} — ${selectedMission?.focus ?? ''}
-Mantenha respostas concisas, guiadas e traga desafios curtos do foco da missão.`;
+    const persona = pickAutoPersona(stage, lastPersonaRef.current);
+    lastPersonaRef.current = persona;
 
+    const systemText = `${roleplayPrompt}
+
+Contexto adicional: Módulo 1 de Python (interpretador, print, strings, variáveis, input, conversão, operadores).
+Você é ${personas[persona].label}. ${personas[persona].accent}
+Etapa atual: ${stage === 'story' ? 'história/explicação' : 'prática/feedback do desafio'}.
+Não mostre missões nem módulos explicitamente; mantenha o clima de narrativa.`;
+
+    try {
       const stream = await aiClient.models.generateContentStream({
         model: modelName,
         config: {
@@ -190,7 +246,7 @@ Mantenha respostas concisas, guiadas e traga desafios curtos do foco da missão.
         ],
       });
 
-      let assembled = '';
+      let assembled = personas[persona].prefix;
       for await (const chunk of stream) {
         assembled += chunk.text ?? '';
         setChatMessages((prev) => {
@@ -200,6 +256,7 @@ Mantenha respostas concisas, guiadas e traga desafios curtos do foco da missão.
           return updated;
         });
       }
+      void persistDialog(assembled, persona);
     } catch (err) {
       setChatMessages((prev) => {
         const updated = [...prev];
@@ -216,145 +273,141 @@ Mantenha respostas concisas, guiadas e traga desafios curtos do foco da missão.
     }
   };
 
+  const enterPractice = () => {
+    setStage('practice');
+    setExecutionError(null);
+    setTerminalOutput([]);
+  };
+
+  const exitPractice = () => {
+    setStage('story');
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b1324] via-[#0f1c33] to-[#1a2a4b] text-slate-100">
+    <div
+      className="min-h-screen text-slate-100"
+      style={{
+        backgroundImage: 'linear-gradient(rgba(0,0,0,.6), rgba(0,0,0,.8)), url(/homepage.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
       <Navbar />
-      <div className="max-w-6xl mx-auto px-6 pb-20">
-        <header className="py-12 text-center space-y-3">
-          <p className="text-sm uppercase tracking-[0.35rem] text-amber-200/80">Lab IA</p>
-          <h1 className="text-4xl font-bold">Laboratório de Código + Terminal + Gemini</h1>
-          <p className="text-slate-300">
-            Escreva código, veja a saída em tempo real e converse com o Gemini para tirar dúvidas.
-          </p>
-          <div className="text-xs text-amber-200/80">
-            Modelo: {modelName} {apiKey ? '' : ' (aguardando chave VITE_GEMINI_API_KEY)'}
-          </div>
+
+      <div className="max-w-5xl mx-auto px-4 pb-16">
+        <header className="py-6 text-center space-y-2">
+          <p className="text-xs uppercase tracking-[0.35rem] text-amber-200/80">Dungeon Primeva</p>
+          <h1 className="text-3xl font-bold">Crônicas de Sygnus</h1>
+          <p className="text-slate-200 text-sm">Chat imersivo — a narrativa conduz, o desafio surge automaticamente.</p>
         </header>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          <section className="bg-slate-900/60 border border-slate-800/60 rounded-3xl shadow-xl shadow-amber-900/20 p-6 backdrop-blur">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="text-xs uppercase text-amber-200/80">IDE rápida</div>
-                <h2 className="text-lg font-semibold">Editor + Terminal</h2>
-              </div>
-              <button
-                onClick={runCode}
-                className="bg-amber-300 text-black font-semibold px-4 py-2 rounded-full hover:bg-amber-400 transition-colors"
+        <div className="relative rounded-3xl border border-white/10 bg-black/50 backdrop-blur-xl overflow-hidden shadow-2xl">
+          <div className="h-[72vh] overflow-y-auto px-6 py-6 space-y-4 flex flex-col">
+            {chatMessages.map((msg, idx) => (
+              <div
+                key={`${msg.role}-${idx}-${msg.text.slice(0, 8)}`}
+                className={`max-w-3xl self-center rounded-2xl px-5 py-4 shadow ${
+                  msg.role === 'user'
+                    ? 'bg-amber-300/90 text-black'
+                    : 'bg-slate-900/80 text-slate-100'
+                }`}
               >
-                Executar código
-              </button>
-            </div>
-            <div className="space-y-4">
-              <textarea
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                spellCheck={false}
-                className="w-full h-64 rounded-2xl bg-[#0f172a] border border-slate-800/80 p-4 font-mono text-sm text-slate-50 shadow-inner shadow-black/40 focus:outline-none focus:ring-2 focus:ring-amber-300/60"
-              />
-
-              <div className="rounded-2xl bg-black border border-slate-800/80 p-4 font-mono text-sm text-green-300 min-h-[160px] shadow-inner shadow-black/60">
-                <div className="text-xs text-slate-400 mb-2">Terminal</div>
-                {terminalOutput.length === 0 && !executionError && (
-                  <p className="text-slate-500">Aguardando execução...</p>
-                )}
-                {terminalOutput.map((line, idx) => (
-                  <div key={idx} className="whitespace-pre-wrap">{`> ${line}`}</div>
-                ))}
-                {executionError && (
-                  <div className="text-red-400 mt-3">Erro: {executionError}</div>
-                )}
+                <div className="whitespace-pre-wrap leading-relaxed">{msg.text || 'Digitando...'}</div>
               </div>
-            </div>
-          </section>
+            ))}
+          </div>
 
-          <section className="bg-slate-900/60 border border-slate-800/60 rounded-3xl shadow-xl shadow-blue-900/30 p-6 backdrop-blur flex flex-col">
-            <div className="mb-4">
-              <div className="text-xs uppercase text-blue-200/80">Chat IA</div>
-              <h2 className="text-lg font-semibold">Gemini como pair-programmer</h2>
-              {!apiKey && (
-                <p className="text-xs text-amber-200/80 mt-1">
-                  Adicione VITE_GEMINI_API_KEY no .env para habilitar o chat.
-                </p>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-              {chatMessages.map((msg, idx) => (
-                <div
-                  key={`${msg.role}-${idx}-${msg.text.slice(0, 8)}`}
-                  className={`rounded-2xl px-4 py-3 max-w-[90%] ${
-                    msg.role === 'user'
-                      ? 'bg-amber-300/90 text-black ml-auto'
-                      : 'bg-slate-800/80 text-slate-100'
-                  }`}
-                >
-                  <div className="text-[11px] uppercase tracking-wide opacity-70">
-                    {msg.role === 'user' ? 'Você' : 'Gemini'}
-                  </div>
-                  <div className="whitespace-pre-wrap">{msg.text || 'Digitando...'}</div>
-                </div>
-              ))}
-            </div>
-
+          <div className="border-t border-white/5 bg-black/70 px-4 py-3">
             <form
-              className="mt-4 flex gap-3"
+              className="flex items-center gap-3 max-w-3xl mx-auto"
               onSubmit={(e) => {
                 e.preventDefault();
                 sendMessage();
+                if (stage === 'story') {
+                  enterPractice();
+                }
               }}
             >
               <input
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Pergunte algo sobre seu código..."
-                className="flex-1 rounded-full bg-slate-800/80 border border-slate-700/70 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300/60"
+                placeholder="Fale com Sygnus, Lyra ou Raxos..."
+                className="flex-1 rounded-full bg-white/5 border border-white/10 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300/60"
               />
               <button
                 type="submit"
                 disabled={isStreaming}
-                className="bg-blue-500 disabled:bg-blue-900/60 text-white font-semibold px-4 py-3 rounded-full hover:bg-blue-600 transition-colors"
+                className="px-4 py-3 rounded-full bg-amber-300 text-black font-semibold hover:bg-amber-400 disabled:bg-amber-800/60 transition-colors"
               >
-                {isStreaming ? 'Enviando...' : 'Enviar'}
+                {isStreaming ? '...' : 'Enviar'}
               </button>
             </form>
+          </div>
 
-            <div className="mt-4 grid md:grid-cols-2 gap-3 text-sm text-slate-200">
-              <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4">
-                <div className="text-xs text-amber-200/80 uppercase mb-1">Missão</div>
-                <select
-                  value={missionId}
-                  onChange={(e) => setMissionId(e.target.value)}
-                  className="w-full bg-slate-800/80 border border-slate-700/70 rounded-xl px-3 py-2"
-                >
-                  {missions.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-2 text-slate-300">
-                  {missions.find((m) => m.id === missionId)?.focus}
-                </p>
-              </div>
+          {stage === 'practice' && (
+            <div className="absolute inset-0 bg-black/90 backdrop-blur-xl flex flex-col">
+              <div className="flex flex-1">
+                <div className="w-1/2 border-r border-white/10 p-6 space-y-4 overflow-y-auto">
+                  <div className="text-xs uppercase tracking-wide text-amber-200/80">Desafio</div>
+                  <h2 className="text-2xl font-semibold">Faça a porta ouvir seu código</h2>
+                  <p className="text-slate-300 text-sm leading-relaxed">
+                    A porta só abre quando ouve um print correto. Escreva um código Python que cumprimente a porta
+                    e mostre uma variação com erro de aspas para você identificar. Explique depois para Sygnus o que cada linha faz.
+                  </p>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-slate-200 space-y-2">
+                    <div className="font-semibold text-amber-200">Lembretes rápidos</div>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Use <code className="font-mono">print("mensagem")</code> com aspas.</li>
+                      <li>Mostre uma string errada sem aspas e explique o erro.</li>
+                      <li>Opcional: guarde a mensagem em uma variável antes de printar.</li>
+                    </ul>
+                  </div>
+                </div>
 
-              <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4">
-                <div className="text-xs text-blue-200/80 uppercase mb-1">Persona</div>
-                <select
-                  value={persona}
-                  onChange={(e) => setPersona(e.target.value as PersonaKey)}
-                  className="w-full bg-slate-800/80 border border-slate-700/70 rounded-xl px-3 py-2"
-                >
-                  {Object.entries(personas).map(([key, value]) => (
-                    <option key={key} value={key}>
-                      {value.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-2 text-slate-300">{personas[persona].accent}</p>
+                <div className="w-1/2 p-6 bg-slate-950/80">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <div className="text-xs uppercase text-blue-200/80">IDE</div>
+                      <h3 className="text-lg font-semibold">Editor + Terminal</h3>
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    spellCheck={false}
+                    className="w-full h-60 rounded-2xl bg-[#0f172a] border border-slate-800/80 p-4 font-mono text-sm text-slate-50 shadow-inner shadow-black/40 focus:outline-none focus:ring-2 focus:ring-amber-300/60"
+                  />
+
+                  <div className="mt-3 flex gap-3">
+                    <button
+                      onClick={() => {
+                        runCode();
+                        exitPractice();
+                      }}
+                      className="px-4 py-2 rounded-full bg-amber-300 text-black font-semibold hover:bg-amber-400 transition-colors"
+                    >
+                      Executar e voltar ao chat
+                    </button>
+                  </div>
+
+                  <div className="rounded-2xl bg-black border border-slate-800/80 p-4 font-mono text-sm text-green-300 min-h-[140px] shadow-inner shadow-black/60 mt-3">
+                    <div className="text-xs text-slate-400 mb-2">Terminal</div>
+                    {terminalOutput.length === 0 && !executionError && (
+                      <p className="text-slate-500">Aguardando execução...</p>
+                    )}
+                    {terminalOutput.map((line, idx) => (
+                      <div key={idx} className="whitespace-pre-wrap">{`> ${line}`}</div>
+                    ))}
+                    {executionError && <div className="text-red-400 mt-3">Erro: {executionError}</div>}
+                    <div className="text-[11px] text-slate-400 mt-3">
+                      Cada tentativa é registrada na Guilda (Mongo) via servidor Java.
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </section>
+          )}
         </div>
       </div>
     </div>
