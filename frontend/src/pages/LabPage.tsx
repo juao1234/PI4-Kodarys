@@ -7,6 +7,65 @@ type ChatMessage = {
   text: string;
 };
 
+type PersonaKey = 'sygnus' | 'lyra' | 'raxos' | 'narrador';
+
+const personas: Record<PersonaKey, { label: string; prompt: string; accent: string }> = {
+  sygnus: {
+    label: 'Professor Sygnus',
+    accent: 'Didática curta, exemplos certos/errados e mini desafio',
+    prompt: `Você é o Professor Sygnus, Mestre Arcano da Guilda dos Compiladores.
+Ensine apenas o conteúdo do módulo 1 (Python básico: interpretador, print, strings, variáveis, input, conversão, operadores).
+Para cada resposta: explicação curta, exemplo correto, exemplo errado e mini desafio mental.
+Ao avaliar código: peça a explicação do aluno, aponte melhorias simples.
+Use metáforas leves de Kodarys.`,
+  },
+  lyra: {
+    label: 'Lyra (amiga)',
+    accent: 'Pede ajuda com erros simples e reforça o aprendizado',
+    prompt: `Você é Lyra, aprendiz gentil e ansiosa.
+Traga códigos com erros simples e peça ajuda com sinceridade.
+Reforce o aprendizado após receber a explicação.
+Admire o protagonista de forma sutil e às vezes crie tensão com Raxos.`,
+  },
+  raxos: {
+    label: 'Raxos (rival)',
+    accent: 'Tom competitivo, ciúme e “melhorias” duvidosas',
+    prompt: `Você é Raxos, rival competitivo e orgulhoso.
+Aponte erros com tom competitivo, proponha soluções "mais otimizadas" que podem ter pequenos defeitos.
+Demonstre ciúmes quando Lyra elogia o protagonista e traga desafios extras.`,
+  },
+  narrador: {
+    label: 'Narrador',
+    accent: 'Descreve cenas, não ensina código',
+    prompt: `Você é o Narrador do mundo de Kodarys.
+Descreva ambientes e eventos ligados ao tema da missão.
+Nunca ensine programação ou corrija código.`,
+  },
+};
+
+const missions = [
+  {
+    id: 'm1',
+    title: 'Missão 1 — Porta da Voz do Código',
+    focus: 'Interpretador, print(), strings. Mostrar certo/errado e erro comum de aspas.',
+  },
+  {
+    id: 'm2',
+    title: 'Missão 2 — Salão das Variáveis',
+    focus: 'Variáveis, tipos básicos e nomeação. Bons nomes e atribuição.',
+  },
+  {
+    id: 'm3',
+    title: 'Missão 3 — Oráculo do Input',
+    focus: 'input(), string vs número, conversão com int/float/str.',
+  },
+  {
+    id: 'm4',
+    title: 'Missão 4 — Câmara das Operações',
+    focus: 'Operadores aritméticos, concatenação, conversão e erros comuns.',
+  },
+];
+
 const starterCode = `// Você pode escrever JavaScript aqui e clicar em Executar
 function somar(a, b) {
   console.log('Somando', a, '+', b);
@@ -38,6 +97,12 @@ export default function LabPage() {
       text: 'Olá! Sou o assistente Gemini. Envie sua dúvida de código que eu ajudo aqui no laboratório.',
     },
   ]);
+  const [missionId, setMissionId] = useState<string>(missions[0].id);
+  const [persona, setPersona] = useState<PersonaKey>('sygnus');
+  const moduleSystemPrompt = `Contexto: Dungeon Primeva, módulo 1 de Python básico.
+Conteúdos: interpretador, print(), strings, variáveis (int/float/str), input(), conversão, operadores e concatenação.
+Siga o ciclo: ensinar curto -> exemplo certo/errado -> mini desafio -> avaliar código -> pedir explicação -> sugerir otimização -> NPC com erro -> aluno corrige.`;
+
   const [isStreaming, setIsStreaming] = useState(false);
   const placeholderIndexRef = useRef<number | null>(null);
 
@@ -101,6 +166,14 @@ export default function LabPage() {
     }
 
     try {
+      const selectedMission = missions.find((m) => m.id === missionId);
+      const systemText = `${moduleSystemPrompt}
+Persona ativa: ${personas[persona].label} — ${personas[persona].accent}
+Instruções da persona:
+${personas[persona].prompt}
+Missão atual: ${selectedMission?.title ?? ''} — ${selectedMission?.focus ?? ''}
+Mantenha respostas concisas, guiadas e traga desafios curtos do foco da missão.`;
+
       const stream = await aiClient.models.generateContentStream({
         model: modelName,
         config: {
@@ -108,6 +181,7 @@ export default function LabPage() {
           tools: [{ googleSearch: {} }],
         },
         contents: [
+          { role: 'system', parts: [{ text: systemText }] },
           ...chatMessages.map((msg) => ({
             role: msg.role === 'user' ? 'user' : 'model',
             parts: [{ text: msg.text }],
@@ -244,6 +318,42 @@ export default function LabPage() {
                 {isStreaming ? 'Enviando...' : 'Enviar'}
               </button>
             </form>
+
+            <div className="mt-4 grid md:grid-cols-2 gap-3 text-sm text-slate-200">
+              <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4">
+                <div className="text-xs text-amber-200/80 uppercase mb-1">Missão</div>
+                <select
+                  value={missionId}
+                  onChange={(e) => setMissionId(e.target.value)}
+                  className="w-full bg-slate-800/80 border border-slate-700/70 rounded-xl px-3 py-2"
+                >
+                  {missions.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.title}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-slate-300">
+                  {missions.find((m) => m.id === missionId)?.focus}
+                </p>
+              </div>
+
+              <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4">
+                <div className="text-xs text-blue-200/80 uppercase mb-1">Persona</div>
+                <select
+                  value={persona}
+                  onChange={(e) => setPersona(e.target.value as PersonaKey)}
+                  className="w-full bg-slate-800/80 border border-slate-700/70 rounded-xl px-3 py-2"
+                >
+                  {Object.entries(personas).map(([key, value]) => (
+                    <option key={key} value={key}>
+                      {value.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-slate-300">{personas[persona].accent}</p>
+              </div>
+            </div>
           </section>
         </div>
       </div>
