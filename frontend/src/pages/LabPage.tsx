@@ -71,6 +71,7 @@ print(mensagem)
 `;
 
 const CURRENT_MISSION = 'M01_INTRO';
+const MISSION_OBJECTIVE = 'Imprimir uma saudação com print() usando uma string (ex.: print("Olá, Dungeon!")).';
 
 const MODEL_NAME = 'gemini-2.5-flash';
 
@@ -369,6 +370,27 @@ export default function LabPage() {
     const errors: string[] = [];
     const vars: Record<string, string | number> = {};
 
+    const buildRunFeedback = (success: boolean, joinedOutput: string, firstError?: string) => {
+      const lowerOut = joinedOutput.toLowerCase();
+      const looksLikeGreeting =
+        lowerOut.includes('ola') || lowerOut.includes('olá') || lowerOut.includes('hello') || lowerOut.includes('sauda');
+
+      if (!success) {
+        const text = `${PERSONAS.raxos.prefix}: Tsc... a magia quebrou${
+          firstError ? ` em "${firstError}"` : ''
+        }. Reescreva usando print() com aspas e reencontre o foco.`;
+        return { persona: 'raxos' as PersonaKey, text };
+      }
+
+      if (looksLikeGreeting) {
+        const text = `${PERSONAS.sygnus.prefix}: A porta reagiu à saudação "${joinedOutput}". Próximo passo: personalize a frase (inclua seu nome ou um título) e veja como ecoa.`;
+        return { persona: 'sygnus' as PersonaKey, text };
+      }
+
+      const text = `${PERSONAS.lyra.prefix}: Rodou sem erro, mas a runa quer uma saudação clara. Tenta um "Olá, Dungeon!" e me mostra de novo?`;
+      return { persona: 'lyra' as PersonaKey, text };
+    };
+
     const lines = code.split(/\r?\n/);
     lines.forEach((raw, idx) => {
       const line = raw.trim();
@@ -419,18 +441,23 @@ export default function LabPage() {
     setLastAttempt({ code, output, error: errors.length ? errors.join('\n') : null });
     void persistTentativa(code, output, errors.length ? errors.join('\n') : undefined);
 
-    const feedback = errors.length
-      ? `${PERSONAS.sygnus.prefix}: A magia falhou — revise as linhas com erro e tente de novo.`
-      : `${PERSONAS.sygnus.prefix}: Conseguiu lançar o feitiço, verifique se a saída atende ao desafio.`;
-    setChatMessages((prev) => [...prev, { role: 'model', persona: 'sygnus', text: feedback }]);
-    void persistDialog(feedback, 'sygnus');
+    const hasVisibleOutput = output.some((line) => line.trim().length > 0);
+    const success = errors.length === 0 && hasVisibleOutput;
+    const joinedOutput = output.join(' | ').trim();
+    const runFeedback = buildRunFeedback(success, joinedOutput, errors[0]);
+
+    // Envia feedback via LLM, usando o último persona calculado para o sistema; se quiser fixar no professor, passe 'sygnus'.
+    const autoPrompt = `Avalie a execução automática: ${success ? 'sucesso' : 'falha'}.
+Saída: ${joinedOutput || '(sem saída)'}
+Erro: ${errors[0] ?? 'nenhum'}
+Objetivo: ${MISSION_OBJECTIVE}
+Dê feedback curto e pedagógico em tom de ${runFeedback.persona}.`;
+    void sendPrompt(autoPrompt, runFeedback.persona);
   };
 
-  const sendMessage = async () => {
-    if (!chatInput.trim() || isStreaming) return;
-    const prompt = chatInput.trim();
-    setChatInput('');
-    const persona = pickAutoPersona(stage, lastPersonaRef.current);
+  const sendPrompt = async (prompt: string, forcedPersona?: PersonaKey) => {
+    if (!prompt.trim() || isStreaming) return;
+    const persona = forcedPersona ?? pickAutoPersona(stage, lastPersonaRef.current);
     lastPersonaRef.current = persona;
     void persistDialog(prompt, 'user');
 
@@ -465,6 +492,7 @@ export default function LabPage() {
 Contexto adicional: Módulo 1 de Python (interpretador, print, strings, variáveis, input, conversão, operadores).
 Você é ${PERSONAS[persona].label}. ${PERSONAS[persona].accent}
 Etapa atual: ${stage === 'story' ? 'história/explicação' : 'prática/feedback do desafio'}.
+Objetivo atual: ${MISSION_OBJECTIVE}
 Não mostre missões nem módulos explicitamente; mantenha o clima de narrativa.
 Se houver tentativa recente, comente o código e peça explicação curta. Seja didático e direto (priorize ensino em 2–4 frases), traga 1 dica prática e 1 mini desafio curto. Menos narrativa, mais explicação de código e próximos passos.`;
 
@@ -527,6 +555,13 @@ Se houver tentativa recente, comente o código e peça explicação curta. Seja 
     }
   };
 
+  const sendMessage = async () => {
+    if (!chatInput.trim()) return;
+    const prompt = chatInput.trim();
+    setChatInput('');
+    await sendPrompt(prompt);
+  };
+
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden font-sans selection:bg-purple-500/30">
       <div
@@ -558,6 +593,15 @@ Se houver tentativa recente, comente o código e peça explicação curta. Seja 
           className="w-full max-w-4xl h-[70vh] overflow-y-auto mb-4 pr-2 space-y-4 scroll-smooth mask-image-gradient flex flex-col items-center"
           style={{ maskImage: 'linear-gradient(to bottom, transparent, black 10%, black 100%)' }}
         >
+          <div className="w-full max-w-3xl mb-2 px-4">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-slate-200 text-sm">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-purple-300 font-mono mb-1">
+                <Sparkles className="w-3 h-3" /> Objetivo da missão
+              </div>
+              <p className="text-slate-100">{MISSION_OBJECTIVE}</p>
+            </div>
+          </div>
+
           <div className="h-10" />
 
           {chatMessages.map((msg, idx) => {
