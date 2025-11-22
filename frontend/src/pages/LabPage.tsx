@@ -70,10 +70,22 @@ mensagem = "Abra-te, código!"
 print(mensagem)
 `;
 
-const CURRENT_MISSION = 'M01_INTRO';
-const MISSION_OBJECTIVE = 'Imprimir uma saudação com print() usando uma string (ex.: print("Olá, Dungeon!")).';
+const DEFAULT_MISSION = 'M01_INTRO';
+const MISSION_OBJECTIVES: Record<string, string> = {
+  M01_INTRO: 'Imprimir uma saudação com print() usando uma string (ex.: print("Olá, Dungeon!")).',
+  M02_VARIAVEIS: 'Criar variáveis bem nomeadas e imprimir seus valores.',
+  M03_INPUT: 'Ler input, converter para número e imprimir o resultado.',
+  M04_OPERADORES: 'Usar operadores aritméticos/concatenação e mostrar o resultado com print().',
+};
+const MISSION_ALLOWED: Record<string, string> = {
+  M01_INTRO: 'interpretador, print(), strings, aspas, variáveis simples',
+  M02_VARIAVEIS: 'variáveis, tipos básicos (int, float, str), nomeação',
+  M03_INPUT: 'input(), conversão int()/float()/str(), diferenças str vs número',
+  M04_OPERADORES: 'operadores aritméticos (+ - * /), concatenação, conversão de tipos',
+};
 
 const MODEL_NAME = 'gemini-2.5-flash';
+type MissionStatus = 'incomplete' | 'awaiting_feedback' | 'complete';
 
 const ROLEPLAY_PROMPT = `Write the next reply in a never-ending fictional roleplay chat set in the magical world of Kodarys, where programming in Python is a form of arcane power. The roleplay takes place between the system-controlled NPCs (Professor Sygnus, Lyra, Raxos, and other dungeon entities) and {{user}}, who plays the protagonist apprentice. Use all provided descriptions, personalities, methodologies, and mission structures to deeply understand and act as every NPC accurately.
 
@@ -238,6 +250,7 @@ export default function LabPage() {
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [lastAttempt, setLastAttempt] = useState<LastAttempt | null>(null);
   const [progress, setProgress] = useState<ProgressState>({});
+  const [currentMission, setCurrentMission] = useState<string>(DEFAULT_MISSION);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -268,6 +281,7 @@ export default function LabPage() {
   ]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [stage, setStage] = useState<Stage>('story');
+  const [missionStatus, setMissionStatus] = useState<MissionStatus>('incomplete');
 
   const placeholderIndexRef = useRef<number | null>(null);
   const lastPersonaRef = useRef<PersonaKey>('sygnus');
@@ -309,6 +323,18 @@ export default function LabPage() {
           ultimaTentativaResultado: data.ultima_tentativa_resultado,
           pontoHistoria: data.ponto_historia_atual,
         });
+        if (data.missao_atual) {
+          setCurrentMission(data.missao_atual);
+        } else if (data.ultima_missao) {
+          setCurrentMission(data.ultima_missao);
+        } else {
+          setCurrentMission(DEFAULT_MISSION);
+        }
+        if (data.status_missao === 'CONCLUIDA') {
+          setMissionStatus('complete');
+        } else {
+          setMissionStatus('incomplete');
+        }
       } catch {
         // ignora erro silenciosamente
       }
@@ -323,7 +349,7 @@ export default function LabPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id_usuario: userId,
-          id_missao: CURRENT_MISSION,
+          id_missao: currentMission,
           tipo: 'dialogo',
           persona,
           texto: text,
@@ -342,7 +368,7 @@ export default function LabPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id_usuario: userId,
-          id_missao: CURRENT_MISSION,
+          id_missao: currentMission,
           tipo: 'tentativa',
           codigo_submetido: codigo,
           output,
@@ -355,9 +381,9 @@ export default function LabPage() {
         const data = await res.json();
         setProgress((prev) => ({
           ...prev,
-          ultimaTentativaMissao: CURRENT_MISSION,
+          ultimaTentativaMissao: currentMission,
           ultimaTentativaResultado: data.resultado ?? prev.ultimaTentativaResultado,
-          ultimaMissao: data.resultado === 'SUCESSO' ? CURRENT_MISSION : prev.ultimaMissao,
+          ultimaMissao: data.resultado === 'SUCESSO' ? currentMission : prev.ultimaMissao,
         }));
       }
     } catch {
@@ -443,28 +469,34 @@ export default function LabPage() {
 
     const hasVisibleOutput = output.some((line) => line.trim().length > 0);
     const success = errors.length === 0 && hasVisibleOutput;
+    setMissionStatus(success ? 'awaiting_feedback' : 'incomplete');
     const joinedOutput = output.join(' | ').trim();
     const runFeedback = buildRunFeedback(success, joinedOutput, errors[0]);
 
     // Envia feedback via LLM, usando o último persona calculado para o sistema; se quiser fixar no professor, passe 'sygnus'.
+    const missionObjective = MISSION_OBJECTIVES[currentMission] ?? MISSION_OBJECTIVES[DEFAULT_MISSION];
     const autoPrompt = `Avalie a execução automática: ${success ? 'sucesso' : 'falha'}.
+Missão: ${currentMission}
 Saída: ${joinedOutput || '(sem saída)'}
 Erro: ${errors[0] ?? 'nenhum'}
-Objetivo: ${MISSION_OBJECTIVE}
+Objetivo: ${missionObjective}
 Dê feedback curto e pedagógico em tom de ${runFeedback.persona}.`;
-    void sendPrompt(autoPrompt, runFeedback.persona);
+    void sendPrompt(autoPrompt, runFeedback.persona, true);
   };
 
-  const sendPrompt = async (prompt: string, forcedPersona?: PersonaKey) => {
+  const sendPrompt = async (prompt: string, forcedPersona?: PersonaKey, silentUser?: boolean) => {
     if (!prompt.trim() || isStreaming) return;
     const persona = forcedPersona ?? pickAutoPersona(stage, lastPersonaRef.current);
     lastPersonaRef.current = persona;
-    void persistDialog(prompt, 'user');
+    if (!silentUser) {
+      void persistDialog(prompt, 'user');
+    }
 
     setChatMessages((prev) => {
       const placeholderIndex = prev.length + 1;
       placeholderIndexRef.current = placeholderIndex;
-      return [...prev, { role: 'user', text: prompt }, { role: 'model', text: '', persona }];
+      const withUser = silentUser ? [] : [{ role: 'user' as const, text: prompt }];
+      return [...prev, ...withUser, { role: 'model' as const, text: '', persona }];
     });
     setIsStreaming(true);
 
@@ -481,10 +513,17 @@ Dê feedback curto e pedagógico em tom de ${runFeedback.persona}.`;
       return;
     }
 
+    const missionObjective = MISSION_OBJECTIVES[currentMission] ?? MISSION_OBJECTIVES[DEFAULT_MISSION];
+    const allowedConcepts = MISSION_ALLOWED[currentMission] ?? MISSION_ALLOWED[DEFAULT_MISSION];
+    const isFirstContact = !lastAttempt;
     const attemptContext = lastAttempt
-      ? `\n\nÚltima execução do aprendiz (avalie e dê feedback objetivo):\nCódigo:\n${lastAttempt.code}\nSaída: ${lastAttempt.output.join(
+      ? `\n\nÚltima execução do aprendiz (avalie e dê feedback objetivo):\nMissão: ${currentMission}\nCódigo:\n${lastAttempt.code}\nSaída: ${lastAttempt.output.join(
           ' | '
         )}\nErro: ${lastAttempt.error ?? 'nenhum'}`
+      : '';
+
+    const onboarding = isFirstContact
+      ? '\nÉ o primeiro contato do aprendiz com programação; Sygnus deve apresentar o conceito do print/strings do zero antes de qualquer pergunta ou tarefa.'
       : '';
 
     const systemText = `${ROLEPLAY_PROMPT}
@@ -492,9 +531,8 @@ Dê feedback curto e pedagógico em tom de ${runFeedback.persona}.`;
 Contexto adicional: Módulo 1 de Python (interpretador, print, strings, variáveis, input, conversão, operadores).
 Você é ${PERSONAS[persona].label}. ${PERSONAS[persona].accent}
 Etapa atual: ${stage === 'story' ? 'história/explicação' : 'prática/feedback do desafio'}.
-Objetivo atual: ${MISSION_OBJECTIVE}
-Não mostre missões nem módulos explicitamente; mantenha o clima de narrativa.
-Se houver tentativa recente, comente o código e peça explicação curta. Seja didático e direto (priorize ensino em 2–4 frases), traga 1 dica prática e 1 mini desafio curto. Menos narrativa, mais explicação de código e próximos passos.`;
+Objetivo atual: ${missionObjective}
+Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allowedConcepts}. NÃO introduza conceitos fora dessa lista (ex.: não ensinar novas sintaxes além do escopo). Metodologia obrigatória: (1) Sygnus explica o conceito atual com exemplo certo/errado + mini desafio; (2) aluno pratica; (3) professor dá feedback curto e faz 1 pergunta simples; (4) NPC (Lyra ou Raxos) traz código bugado para o aluno corrigir; (5) conclua e convide a seguir para a próxima missão. Não repita passos já concluídos, não fique preso em loop. Seja didático e direto (2–4 frases), traga 1 dica prática e 1 mini desafio curto. Menos narrativa, mais explicação de código e próximos passos.${onboarding}`;
 
     const userPrompt =
       prompt +
@@ -539,6 +577,9 @@ Se houver tentativa recente, comente o código e peça explicação curta. Seja 
         });
       }
       void persistDialog(assembled, persona);
+      if (missionStatus === 'awaiting_feedback') {
+        setMissionStatus('complete');
+      }
     } catch (err) {
       setChatMessages((prev) => {
         const updated = [...prev];
@@ -598,7 +639,12 @@ Se houver tentativa recente, comente o código e peça explicação curta. Seja 
               <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-purple-300 font-mono mb-1">
                 <Sparkles className="w-3 h-3" /> Objetivo da missão
               </div>
-              <p className="text-slate-100">{MISSION_OBJECTIVE}</p>
+              <p className="text-slate-100">
+                {MISSION_OBJECTIVES[currentMission] ?? MISSION_OBJECTIVES[DEFAULT_MISSION]}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Missão atual: {currentMission} • Status: {missionStatus}
+              </p>
             </div>
           </div>
 
@@ -608,6 +654,8 @@ Se houver tentativa recente, comente o código e peça explicação curta. Seja 
             const match = msg.text.match(/^([^:]+):(.*)/s);
             const name = match ? match[1].trim() : msg.role === 'user' ? 'Human' : 'Unknown';
             const content = match ? match[2] : msg.text;
+            const codeMatch = msg.text.match(/```(?:python)?\\s*([\\s\\S]*?)```/i);
+            const snippet = codeMatch ? codeMatch[1].trim() : null;
 
             let nameColor = 'text-slate-400';
             if (msg.role === 'user') nameColor = 'text-cyan-300 shadow-cyan-500/20 drop-shadow-sm';
@@ -625,6 +673,16 @@ Se houver tentativa recente, comente o código e peça explicação curta. Seja 
                   <p className="text-slate-200 text-sm md:text-base leading-relaxed font-light opacity-90 group-hover:opacity-100 whitespace-pre-wrap italic">
                     {content}
                   </p>
+                  {snippet && (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => setCode(snippet)}
+                        className="text-xs px-2 py-1 rounded bg-purple-700/60 text-white border border-purple-500/50 hover:bg-purple-600 transition-colors"
+                      >
+                        Enviar código para IDE
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );

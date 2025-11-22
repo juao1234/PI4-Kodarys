@@ -29,6 +29,7 @@ public class MainServer {
     private static MongoCollection<Document> usuariosCollection;
     private static MongoCollection<Document> historicoMissoesCollection;
     private static MongoCollection<Document> estadoNarrativaCollection;
+    private static final String[] MISSION_SEQUENCE = new String[] { "M01_INTRO", "M02_VARIAVEIS", "M03_INPUT", "M04_OPERADORES" };
 
     public static void main(String[] args) {
         int port = 5000;
@@ -222,6 +223,15 @@ public class MainServer {
 
         if ("SUCESSO".equals(resultado)) {
             set.append("ponto_historia_atual", idMissao + "_COMPLETA");
+            String proxima = proximaMissao(idMissao);
+            if (proxima != null) {
+                set.append("missao_atual", proxima);
+                set.append("status_missao", "EM_ANDAMENTO");
+            } else {
+                set.append("missao_atual", idMissao);
+                set.append("status_missao", "CONCLUIDA");
+                set.append("modulo_status", "CONCLUIDO");
+            }
         }
 
         Document update = new Document("$set", set);
@@ -262,6 +272,15 @@ public class MainServer {
         return "PENDENTE";
     }
 
+    private static String proximaMissao(String atual) {
+        for (int i = 0; i < MISSION_SEQUENCE.length; i++) {
+            if (MISSION_SEQUENCE[i].equals(atual) && i + 1 < MISSION_SEQUENCE.length) {
+                return MISSION_SEQUENCE[i + 1];
+            }
+        }
+        return null;
+    }
+
     private static java.util.List<String> jsonArrayToStringList(JsonElement element) {
         java.util.List<String> list = new java.util.ArrayList<>();
         if (element == null || !element.isJsonArray()) return list;
@@ -287,6 +306,9 @@ public class MainServer {
         if (narrativa != null) {
             resp.addProperty("ponto_historia_atual", narrativa.getString("ponto_historia_atual"));
             resp.addProperty("ultima_missao", narrativa.getString("ultima_missao"));
+            resp.addProperty("missao_atual", narrativa.getString("missao_atual"));
+            resp.addProperty("status_missao", narrativa.getString("status_missao"));
+            resp.addProperty("modulo_status", narrativa.getString("modulo_status"));
             resp.addProperty("ultima_atualizacao",
                     narrativa.get("ultima_atualizacao") != null ? narrativa.get("ultima_atualizacao").toString() : null);
         }
