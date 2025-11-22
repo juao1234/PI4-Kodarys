@@ -11,6 +11,13 @@ type ChatMessage = {
 
 type PersonaKey = 'sygnus' | 'lyra' | 'raxos' | 'narrador';
 type Stage = 'story' | 'practice';
+type LastAttempt = { code: string; output: string[]; error: string | null };
+type ProgressState = {
+  ultimaMissao?: string;
+  ultimaTentativaMissao?: string;
+  ultimaTentativaResultado?: string;
+  pontoHistoria?: string;
+};
 
 interface PersonaConfig {
   label: string;
@@ -62,6 +69,8 @@ const STARTER_CODE = `# Escreva Python aqui. Exemplo:
 mensagem = "Abra-te, código!"
 print(mensagem)
 `;
+
+const CURRENT_MISSION = 'M01_INTRO';
 
 const MODEL_NAME = 'gemini-2.5-flash';
 
@@ -219,9 +228,15 @@ const pickAutoPersona = (stage: Stage, last?: PersonaKey): PersonaKey => {
 };
 
 export default function LabPage() {
+  const [userId, setUserId] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'demo-user';
+    return localStorage.getItem('kodarys_user') ?? 'demo-user';
+  });
   const [code, setCode] = useState(STARTER_CODE);
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
   const [executionError, setExecutionError] = useState<string | null>(null);
+  const [lastAttempt, setLastAttempt] = useState<LastAttempt | null>(null);
+  const [progress, setProgress] = useState<ProgressState>({});
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -273,14 +288,42 @@ export default function LabPage() {
     }
   }, [chatMessages, stage]);
 
+  const updateUserId = (value: string) => {
+    const normalized = value.trim() || 'demo-user';
+    setUserId(normalized);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kodarys_user', normalized);
+    }
+  };
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const res = await fetch(`http://localhost:8080/api/progresso?id_usuario=${encodeURIComponent(userId)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setProgress({
+          ultimaMissao: data.ultima_missao,
+          ultimaTentativaMissao: data.ultima_tentativa_missao,
+          ultimaTentativaResultado: data.ultima_tentativa_resultado,
+          pontoHistoria: data.ponto_historia_atual,
+        });
+      } catch {
+        // ignora erro silenciosamente
+      }
+    };
+    fetchProgress();
+  }, [userId]);
+
   const persistDialog = async (text: string, persona: PersonaKey | 'user') => {
     try {
-      await fetch('http://localhost:8080/api/usuario', {
+      await fetch('http://localhost:8080/api/evento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id_usuario: userId,
+          id_missao: CURRENT_MISSION,
           tipo: 'dialogo',
-          missao: 'M01',
           persona,
           texto: text,
           timestamp: new Date().toISOString(),
@@ -293,18 +336,29 @@ export default function LabPage() {
 
   const persistTentativa = async (codigo: string, output: string[], erro?: string) => {
     try {
-      await fetch('http://localhost:8080/api/usuario', {
+      const res = await fetch('http://localhost:8080/api/evento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id_usuario: userId,
+          id_missao: CURRENT_MISSION,
           tipo: 'tentativa',
-          id_missao: 'M01',
           codigo_submetido: codigo,
           output,
           resultado: erro ? 'FALHA' : 'PENDENTE',
           data: new Date().toISOString(),
+          erro,
         }),
       });
+      if (res.ok) {
+        const data = await res.json();
+        setProgress((prev) => ({
+          ...prev,
+          ultimaTentativaMissao: CURRENT_MISSION,
+          ultimaTentativaResultado: data.resultado ?? prev.ultimaTentativaResultado,
+          ultimaMissao: data.resultado === 'SUCESSO' ? CURRENT_MISSION : prev.ultimaMissao,
+        }));
+      }
     } catch {
       // silencia em dev
     }
@@ -362,7 +416,14 @@ export default function LabPage() {
 
     setTerminalOutput(output);
     setExecutionError(errors.length ? errors.join('\n') : null);
+    setLastAttempt({ code, output, error: errors.length ? errors.join('\n') : null });
     void persistTentativa(code, output, errors.length ? errors.join('\n') : undefined);
+
+    const feedback = errors.length
+      ? `${PERSONAS.sygnus.prefix}: A magia falhou — revise as linhas com erro e tente de novo.`
+      : `${PERSONAS.sygnus.prefix}: Conseguiu lançar o feitiço, verifique se a saída atende ao desafio.`;
+    setChatMessages((prev) => [...prev, { role: 'model', persona: 'sygnus', text: feedback }]);
+    void persistDialog(feedback, 'sygnus');
   };
 
   const sendMessage = async () => {
@@ -393,12 +454,25 @@ export default function LabPage() {
       return;
     }
 
+    const attemptContext = lastAttempt
+      ? `\n\nÚltima execução do aprendiz (avalie e dê feedback objetivo):\nCódigo:\n${lastAttempt.code}\nSaída: ${lastAttempt.output.join(
+          ' | '
+        )}\nErro: ${lastAttempt.error ?? 'nenhum'}`
+      : '';
+
     const systemText = `${ROLEPLAY_PROMPT}
 
 Contexto adicional: Módulo 1 de Python (interpretador, print, strings, variáveis, input, conversão, operadores).
 Você é ${PERSONAS[persona].label}. ${PERSONAS[persona].accent}
 Etapa atual: ${stage === 'story' ? 'história/explicação' : 'prática/feedback do desafio'}.
-Não mostre missões nem módulos explicitamente; mantenha o clima de narrativa.`;
+Não mostre missões nem módulos explicitamente; mantenha o clima de narrativa.
+Se houver tentativa recente, comente o código e peça explicação curta. Seja didático e direto (priorize ensino em 2–4 frases), traga 1 dica prática e 1 mini desafio curto. Menos narrativa, mais explicação de código e próximos passos.`;
+
+    const userPrompt =
+      prompt +
+      (attemptContext
+        ? `\n\nLeia e avalie a última execução (responda em até 4 frases):${attemptContext}`
+        : '');
 
     try {
       const stream = await aiClient.models.generateContentStream({
@@ -413,7 +487,7 @@ Não mostre missões nem módulos explicitamente; mantenha o clima de narrativa.
             role: msg.role === 'user' ? 'user' : 'model',
             parts: [{ text: msg.text }],
           })),
-          { role: 'user', parts: [{ text: prompt }] },
+          { role: 'user', parts: [{ text: userPrompt }] },
         ],
       });
 
@@ -469,6 +543,16 @@ Não mostre missões nem módulos explicitamente; mantenha o clima de narrativa.
       <NavbarLocal />
 
       <main className="relative z-20 w-full h-full flex flex-col items-center justify-end pb-8 px-4">
+        <div className="absolute top-4 right-6 z-30 flex items-center gap-2 bg-black/40 border border-white/10 rounded-full px-3 py-1 text-xs text-slate-200 backdrop-blur-md">
+          <span className="uppercase tracking-wide text-slate-400 font-mono">Usuário</span>
+          <input
+            value={userId}
+            onChange={(e) => updateUserId(e.target.value)}
+            className="bg-transparent border-b border-white/20 focus:border-purple-400 outline-none px-1 text-slate-100 placeholder-slate-500 w-32"
+            placeholder="demo-user"
+          />
+        </div>
+
         <div
           ref={chatContainerRef}
           className="w-full max-w-4xl h-[70vh] overflow-y-auto mb-4 pr-2 space-y-4 scroll-smooth mask-image-gradient flex flex-col items-center"
@@ -558,6 +642,17 @@ Não mostre missões nem módulos explicitamente; mantenha o clima de narrativa.
             <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">
               Chronicles of Kodarys • Módulo 01 • <span className="text-purple-500/60">Conectado</span>
             </p>
+            <div className="mt-2 text-xs text-slate-400 flex justify-center gap-3">
+              <span className="px-2 py-1 bg-white/5 rounded-full border border-white/10">
+                Última missão: {progress.ultimaMissao ?? '—'}
+              </span>
+              <span className="px-2 py-1 bg-white/5 rounded-full border border-white/10">
+                Última tentativa: {progress.ultimaTentativaMissao ?? '—'} ({progress.ultimaTentativaResultado ?? '—'})
+              </span>
+              <span className="px-2 py-1 bg-white/5 rounded-full border border-white/10">
+                História: {progress.pontoHistoria ?? '—'}
+              </span>
+            </div>
           </div>
         </div>
       </main>

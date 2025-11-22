@@ -10,12 +10,16 @@ import java.net.Socket;
 import org.bson.Document;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.kodarys.model.Usuario;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Sorts;
 
 import io.github.cdimascio.dotenv.Dotenv;
 
@@ -23,6 +27,8 @@ public class MainServer {
 
     private static MongoClient mongoClient;
     private static MongoCollection<Document> usuariosCollection;
+    private static MongoCollection<Document> historicoMissoesCollection;
+    private static MongoCollection<Document> estadoNarrativaCollection;
 
     public static void main(String[] args) {
         int port = 5000;
@@ -46,20 +52,26 @@ public class MainServer {
                     System.out.println("Recebido: " + json);
 
                     try {
-                        Usuario usuario = gson.fromJson(json, Usuario.class);
+                        JsonObject root = gson.fromJson(json, JsonObject.class);
 
-                        if (usuario != null &&
-                                usuario.getNome() != null &&
-                                usuario.getEmail() != null) {
-
-                            // ✅ Salva no MongoDB
-                            salvarNoMongo(usuario);
-
-                            out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido e salvo no MongoDB.\"}");
-                            System.out.println("Usuário válido: " + usuario);
+                        if (root != null && root.has("tipo")) {
+                            String response = processarEvento(root);
+                            out.println(response);
                         } else {
-                            out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes.\"}");
-                            System.out.println("Usuário inválido (campos obrigatórios ausentes).");
+                            Usuario usuario = gson.fromJson(json, Usuario.class);
+
+                            if (usuario != null &&
+                                    usuario.getNome() != null &&
+                                    usuario.getEmail() != null) {
+
+                                salvarNoMongo(usuario);
+
+                                out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido e salvo no MongoDB.\"}");
+                                System.out.println("Usuário válido: " + usuario);
+                            } else {
+                                out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes.\"}");
+                                System.out.println("Usuário inválido (campos obrigatórios ausentes).");
+                            }
                         }
                     } catch (JsonSyntaxException e) {
                         out.println("{\"status\": \"erro\", \"mensagem\": \"JSON inválido.\"}");
@@ -103,13 +115,28 @@ public class MainServer {
             System.out.println("MONGO_COLLECTION não definido no .env. Usando padrão: " + collectionName);
         }
 
+        String historicoName = dotenv.get("MONGO_COLLECTION_HISTORICO");
+        if (historicoName == null || historicoName.isEmpty()) {
+            historicoName = "historico_missoes";
+            System.out.println("MONGO_COLLECTION_HISTORICO não definido. Usando padrão: " + historicoName);
+        }
+
+        String narrativaName = dotenv.get("MONGO_COLLECTION_NARRATIVA");
+        if (narrativaName == null || narrativaName.isEmpty()) {
+            narrativaName = "estado_narrativa";
+            System.out.println("MONGO_COLLECTION_NARRATIVA não definido. Usando padrão: " + narrativaName);
+        }
+
         mongoClient = MongoClients.create(uri);
         MongoDatabase db = mongoClient.getDatabase(dbName);
         usuariosCollection = db.getCollection(collectionName);
+        historicoMissoesCollection = db.getCollection(historicoName);
+        estadoNarrativaCollection = db.getCollection(narrativaName);
 
         System.out.println("Conectado ao MongoDB.");
         System.out.println("URI: " + uri);
         System.out.println("DB: " + dbName + " | Coleção: " + collectionName);
+        System.out.println("Coleção histórico: " + historicoName + " | Coleção narrativa: " + narrativaName);
     }
 
     private static void salvarNoMongo(Usuario u) {
@@ -119,5 +146,158 @@ public class MainServer {
 
         usuariosCollection.insertOne(doc);
         System.out.println("Usuário salvo no MongoDB: " + doc.toJson());
+    }
+
+    // ---------------------- EVENTOS ----------------------
+
+    private static String processarEvento(JsonObject root) {
+        String tipo = root.get("tipo").getAsString();
+        String idUsuario = root.has("id_usuario") ? root.get("id_usuario").getAsString() : null;
+        String idMissao = root.has("id_missao") ? root.get("id_missao").getAsString() : "M01_INTRO";
+
+        if (idUsuario == null || idUsuario.isEmpty()) {
+            return "{\"status\":\"erro\",\"mensagem\":\"id_usuario é obrigatório\"}";
+        }
+
+        if ("dialogo".equalsIgnoreCase(tipo)) {
+            registrarDialogo(idUsuario, root);
+            return "{\"status\":\"ok\",\"mensagem\":\"Diálogo registrado.\"}";
+        }
+
+        if ("progresso_get".equalsIgnoreCase(tipo)) {
+            return obterProgresso(idUsuario);
+        }
+
+        if ("tentativa".equalsIgnoreCase(tipo)) {
+            return registrarTentativa(idUsuario, idMissao, root);
+        }
+
+        return "{\"status\":\"erro\",\"mensagem\":\"tipo desconhecido\"}";
+    }
+
+    private static void registrarDialogo(String idUsuario, JsonObject root) {
+        Document filtro = new Document("id_usuario", idUsuario);
+
+        Document update = new Document("$set", new Document("id_usuario", idUsuario))
+                .append("$push", new Document("dialogos_vistos",
+                        new Document("texto", root.has("texto") ? root.get("texto").getAsString() : "")
+                                .append("persona", root.has("persona") ? root.get("persona").getAsString() : "narrador")
+                                .append("timestamp", System.currentTimeMillis())));
+
+        estadoNarrativaCollection.updateOne(filtro, update, new com.mongodb.client.model.UpdateOptions().upsert(true));
+    }
+
+    private static String registrarTentativa(String idUsuario, String idMissao, JsonObject root) {
+        String codigo = root.has("codigo_submetido") ? root.get("codigo_submetido").getAsString() : "";
+        String erro = root.has("erro") ? root.get("erro").getAsString() : "";
+        String resultado = validarMissao(idMissao, codigo, erro);
+
+        Document tentativa = new Document("id_usuario", idUsuario)
+                .append("id_missao", idMissao)
+                .append("resultado", resultado)
+                .append("data", new java.util.Date())
+                .append("codigo_submetido", codigo);
+
+        if (root.has("output")) {
+            tentativa.append("output", jsonArrayToStringList(root.get("output")));
+        }
+        if (!erro.isEmpty()) {
+            tentativa.append("erro", erro);
+        }
+
+        historicoMissoesCollection.insertOne(tentativa);
+        atualizarNarrativaPosTentativa(idUsuario, idMissao, resultado);
+
+        String feedback = resultado.equals("SUCESSO")
+                ? "Missão " + idMissao + " concluída."
+                : "Missão " + idMissao + " ainda não passou.";
+
+        return "{\"status\":\"ok\",\"resultado\":\"" + resultado + "\",\"feedback\":\"" + feedback + "\"}";
+    }
+
+    private static void atualizarNarrativaPosTentativa(String idUsuario, String idMissao, String resultado) {
+        Document filtro = new Document("id_usuario", idUsuario);
+        Document set = new Document("ultima_missao", idMissao)
+                .append("ultima_atualizacao", new java.util.Date());
+
+        if ("SUCESSO".equals(resultado)) {
+            set.append("ponto_historia_atual", idMissao + "_COMPLETA");
+        }
+
+        Document update = new Document("$set", set);
+        estadoNarrativaCollection.updateOne(filtro, update, new com.mongodb.client.model.UpdateOptions().upsert(true));
+    }
+
+    private static String validarMissao(String idMissao, String codigo, String erro) {
+        if (erro != null && !erro.isEmpty()) {
+            return "FALHA";
+        }
+
+        if (idMissao.startsWith("M01")) {
+            boolean hasPrint = codigo.contains("print");
+            boolean hasString = codigo.contains("\"") || codigo.contains("'");
+            return (hasPrint && hasString) ? "SUCESSO" : "FALHA";
+        }
+
+        if (idMissao.startsWith("M02")) {
+            boolean hasAssign = codigo.matches("(?s).*\\b[A-Za-z_]\\w*\\s*=\\s*.+");
+            boolean hasPrintVar = codigo.matches("(?s).*print\\s*\\(\\s*[A-Za-z_]\\w*\\s*\\).*");
+            return (hasAssign && hasPrintVar) ? "SUCESSO" : "FALHA";
+        }
+
+        if (idMissao.startsWith("M03")) {
+            boolean hasInput = codigo.contains("input(");
+            boolean hasConvert = codigo.contains("int(") || codigo.contains("float(") || codigo.contains("str(");
+            boolean printsResult = codigo.contains("print");
+            return (hasInput && hasConvert && printsResult) ? "SUCESSO" : "FALHA";
+        }
+
+        if (idMissao.startsWith("M04")) {
+            boolean hasOperator = codigo.contains("+") || codigo.contains("-") || codigo.contains("*") || codigo.contains("/");
+            boolean printsResult = codigo.contains("print");
+            boolean avoidsOnlyString = !(codigo.contains("\"\"\"") || codigo.contains("'''"));
+            return (hasOperator && printsResult && avoidsOnlyString) ? "SUCESSO" : "FALHA";
+        }
+
+        return "PENDENTE";
+    }
+
+    private static java.util.List<String> jsonArrayToStringList(JsonElement element) {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        if (element == null || !element.isJsonArray()) return list;
+        JsonArray arr = element.getAsJsonArray();
+        for (JsonElement e : arr) {
+            list.add(e.getAsString());
+        }
+        return list;
+    }
+
+    private static String obterProgresso(String idUsuario) {
+        Document filtro = new Document("id_usuario", idUsuario);
+        Document narrativa = estadoNarrativaCollection.find(filtro).first();
+
+        Document lastTentativa = historicoMissoesCollection.find(filtro)
+                .sort(Sorts.descending("data"))
+                .first();
+
+        JsonObject resp = new JsonObject();
+        resp.addProperty("status", "ok");
+        resp.addProperty("id_usuario", idUsuario);
+
+        if (narrativa != null) {
+            resp.addProperty("ponto_historia_atual", narrativa.getString("ponto_historia_atual"));
+            resp.addProperty("ultima_missao", narrativa.getString("ultima_missao"));
+            resp.addProperty("ultima_atualizacao",
+                    narrativa.get("ultima_atualizacao") != null ? narrativa.get("ultima_atualizacao").toString() : null);
+        }
+
+        if (lastTentativa != null) {
+            resp.addProperty("ultima_tentativa_missao", lastTentativa.getString("id_missao"));
+            resp.addProperty("ultima_tentativa_resultado", lastTentativa.getString("resultado"));
+            resp.addProperty("ultima_tentativa_data",
+                    lastTentativa.get("data") != null ? lastTentativa.get("data").toString() : null);
+        }
+
+        return resp.toString();
     }
 }
