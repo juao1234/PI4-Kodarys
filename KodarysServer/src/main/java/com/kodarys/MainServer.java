@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import org.bson.Document;
+import org.mindrot.jbcrypt.BCrypt;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -50,10 +51,16 @@ public class MainServer {
 
                         if (usuario != null &&
                                 usuario.getNome() != null &&
-                                usuario.getEmail() != null) {
+                                usuario.getEmail() != null &&
+                                usuario.getSenha() != null &&
+                                !usuario.getSenha().isBlank()) {
 
-                            // ✅ Salva no MongoDB
-                            salvarNoMongo(usuario);
+                            // ⚠️ NUNCA salvar a senha pura.
+                            // 🔒 Gera um hash seguro com BCrypt
+                            String senhaHash = BCrypt.hashpw(usuario.getSenha(), BCrypt.gensalt());
+
+                            // ✅ Salva no MongoDB com senhaHash
+                            salvarNoMongo(usuario, senhaHash);
 
                             out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido e salvo no MongoDB.\"}");
                             System.out.println("Usuário válido: " + usuario);
@@ -112,10 +119,12 @@ public class MainServer {
         System.out.println("DB: " + dbName + " | Coleção: " + collectionName);
     }
 
-    private static void salvarNoMongo(Usuario u) {
+    // ⚠️ Agora salvamos senhaHash, não a senha pura
+    private static void salvarNoMongo(Usuario u, String senhaHash) {
         Document doc = new Document("nome", u.getNome())
                 .append("email", u.getEmail())
-                .append("idade", u.getIdade());
+                .append("idade", u.getIdade())    // se não usar idade, pode tirar depois
+                .append("senhaHash", senhaHash);  // 👈 aqui vai o hash, nunca a senha
 
         usuariosCollection.insertOne(doc);
         System.out.println("Usuário salvo no MongoDB: " + doc.toJson());

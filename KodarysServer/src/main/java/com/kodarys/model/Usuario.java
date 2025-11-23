@@ -2,17 +2,23 @@ package com.kodarys.model;
 
 public class Usuario {
     private String nome;
-    private int idade;
+    private Integer idade;   // se não estiver usando, pode remover depois
     private String email;
+    private String senha;    // 👈 NOVO CAMPO
+
+    public Usuario() {}
 
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
 
-    public int getIdade() { return idade; }
-    public void setIdade(int idade) { this.idade = idade; }
+    public Integer getIdade() { return idade; }
+    public void setIdade(Integer idade) { this.idade = idade; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public String getSenha() { return senha; }
+    public void setSenha(String senha) { this.senha = senha; }
 
     @Override
     public String toString() {
@@ -20,6 +26,7 @@ public class Usuario {
                 "nome='" + nome + '\'' +
                 ", idade=" + idade +
                 ", email='" + email + '\'' +
+                // não exibimos senha aqui por segurança
                 '}';
     }
 }
