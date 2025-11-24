@@ -1,0 +1,60 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.login-page {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(/Image_Login.png);
+  backdrop-filter: blur(1rem);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+}
+
+.title {
+  font-family: "Merriweather", serif;
+  font-size: 64px;
+  font-weight: 900;
+  color: #ffffff;
+  text-align: center;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+}
+
+.login-card {
+  background: rgba(15, 20, 25, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  width: 500px;
+  max-width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-card h3 {
+  font-family: "Merriweather", serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #FFFFFF;
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.register-text {
+  color: #4A90E2;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+input:active{
+  border:none !important;
+}

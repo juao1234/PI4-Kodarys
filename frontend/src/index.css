@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&display=swap');
+@import "tailwindcss";
+
+:root {
+  font-family: 'Merriweather', serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.main-content{
+  height: 100vh;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  background-image: linear-gradient(rgba(0,0,0,.5), rgba(0,0,0,.5) ), url(/homepage.png);
+}
+
+a{
+  text-decoration: none;
+  transition: color .3s ease;
+}
+
+a:hover{
+  /* ISSO FUNCIONA PAR APLICAR ESTILOS DO TAILWIND EM TAGS HTML DIRETAMENTE */
+  @apply text-blue-300
+}
+
+
+h1,h2,h3,h4,h5,h6,p,button,input,label{
+  font-family: 'Merriweather', serif !important;
+}
+
+p{
+  font-family: 'Merriweather', serif !important;
+}

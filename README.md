@@ -103,17 +103,15 @@ O sistema utiliza o MongoDB para armazenar todos os dados persistentes, organiza
   "itens_adquiridos": ["ESPADA_LENDARIA_SKIN"]
 }
 ````
-1.  **Instale as dependências (via Maven):**
-    ```bash
-    mvn clean install
-    ```
+Rode os arquivos HttpToTcpServer.java e MainServer.java para iniciar o servidor.
 
-3.  **Execute a aplicação:**
-    ```bash
-    mvn spring-boot:run
-    ```
+O HttpToTcpServer receberá a mensagem do site por HTTP e irá compartilhar na porta do MainServer de um jeito legível para o TCP
 
-O servidor estará rodando em `http://localhost:8080`.
+Ative o site digitando o comando: "npm run dev" na pasta frontend
+
+Crie uma conta ou realize o login no site
+
+O site estará rodando em ` http://localhost:5173/`.
 
 ## 🧑‍💻 Equipe
 
