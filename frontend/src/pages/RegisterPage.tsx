@@ -16,6 +16,7 @@ export default function RegisterPage() {
   // 👇 estados dos campos
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [idade, setIdade] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmSenha, setConfirmSenha] = useState("");
 
@@ -25,6 +26,11 @@ export default function RegisterPage() {
   // 🔵 Função chamada ao clicar em "Cadastrar"
   async function handleRegister() {
     // validações simples no front
+    if (!idade || Number(idade) < 1) {
+      alert("Digite uma idade válida.");
+      return;
+    }
+
     if (!nome || !email || !senha || !confirmSenha) {
       alert("Preencha todos os campos.");
       return;
@@ -40,7 +46,8 @@ export default function RegisterPage() {
     const novoUsuario = {
       nome,
       email,
-      senha, // será enviada em texto puro e o backend vai fazer o hash
+      senha,
+      idade: Number(idade),
     };
 
     console.log("Enviando para backend:", novoUsuario);
@@ -108,6 +115,20 @@ export default function RegisterPage() {
               className="!w-full bg-transparent outline-none text-white"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        {/* Idade */}
+        <div className="flex flex-col gap-2">
+          <p className="text-white font-inherit tracking-wide">Idade</p>
+          <div className="flex items-center gap-2 border border-slate-400 rounded-lg !p-2">
+            <input
+              type="number"
+              placeholder="Digite sua idade"
+              className="!w-full bg-transparent outline-none text-white"
+              value={idade}
+              onChange={(e) => setIdade(e.target.value)}
             />
           </div>
         </div>
