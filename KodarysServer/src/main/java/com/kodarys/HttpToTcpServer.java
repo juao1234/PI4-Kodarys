@@ -28,6 +28,8 @@ public class HttpToTcpServer {
 
         // Rota que o React vai chamar
         server.createContext("/api/usuario", HttpToTcpServer::handleUsuario);
+        server.createContext("/api/evento", HttpToTcpServer::handleUsuario);
+        server.createContext("/api/progresso", HttpToTcpServer::handleProgresso);
 
         server.start();
     }
@@ -39,7 +41,7 @@ public class HttpToTcpServer {
             // CORS pro React funcionar
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, OPTIONS");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, OPTIONS, GET");
 
             if ("OPTIONS".equalsIgnoreCase(method)) {
                 exchange.sendResponseHeaders(204, -1);
@@ -76,6 +78,67 @@ public class HttpToTcpServer {
             exchange.getResponseBody().write(respBytes);
             exchange.getResponseBody().close();
         }
+    }
+
+    private static void handleProgresso(HttpExchange exchange) throws IOException {
+        try {
+            String method = exchange.getRequestMethod();
+
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
+
+            if ("OPTIONS".equalsIgnoreCase(method)) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+
+            if (!"GET".equalsIgnoreCase(method)) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            String query = exchange.getRequestURI().getQuery();
+            String idUsuario = extrairQueryParam(query, "id_usuario");
+
+            if (idUsuario == null || idUsuario.isEmpty()) {
+                byte[] respBytes = "{\"status\":\"erro\",\"mensagem\":\"id_usuario obrigatório\"}".getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(400, respBytes.length);
+                exchange.getResponseBody().write(respBytes);
+                exchange.getResponseBody().close();
+                return;
+            }
+
+            String payload = "{\"tipo\":\"progresso_get\",\"id_usuario\":\"" + idUsuario + "\"}";
+            String respostaDoServidorTcp = enviarParaServidorTCP(payload);
+
+            byte[] respBytes = respostaDoServidorTcp.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json; charset=utf-8");
+            exchange.sendResponseHeaders(200, respBytes.length);
+
+            OutputStream os = exchange.getResponseBody();
+            os.write(respBytes);
+            os.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            String erro = "{\"status\":\"erro\",\"mensagem\":\"Erro interno no adaptador HTTP→TCP.\"}";
+            byte[] respBytes = erro.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(500, respBytes.length);
+            exchange.getResponseBody().write(respBytes);
+            exchange.getResponseBody().close();
+        }
+    }
+
+    private static String extrairQueryParam(String query, String key) {
+        if (query == null || query.isEmpty()) return null;
+        String[] pairs = query.split("&");
+        for (String p : pairs) {
+            String[] kv = p.split("=");
+            if (kv.length == 2 && kv[0].equals(key)) {
+                return java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
+            }
+        }
+        return null;
     }
 
     // ---------------------- Fala com o servidor TCP antigo ----------------------
