@@ -60,28 +60,34 @@ public class MainServer {
                         JsonObject root = gson.fromJson(json, JsonObject.class);
 
                         if (root != null && root.has("tipo")) {
+                            // Trata eventos (dialogo, tentativa, progresso_get, etc.)
                             String response = processarEvento(root);
                             out.println(response);
                         } else {
+                            // Trata como cadastro de usuário
                             Usuario usuario = gson.fromJson(json, Usuario.class);
 
                             if (usuario != null &&
                                     usuario.getNome() != null &&
-                                    usuario.getEmail() != null) {
-                                
-                            try {
-                                // tenta salvar no Mongo
-                                salvarNoMongo(usuario, senhaHash);
+                                    usuario.getEmail() != null &&
+                                    usuario.getSenha() != null) {
 
-                                out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido e salvo no MongoDB.\"}");
-                                System.out.println("Usuário válido: " + usuario);
-                            } catch (MongoException me) {
-                                me.printStackTrace();
-                                out.println("{\"status\": \"erro\", \"mensagem\": \"Erro ao salvar no banco de dados.\"}");
-                                System.out.println("Erro ao salvar no MongoDB: " + me.getMessage());
-                            }
+                                // Gera o hash da senha
+                                String senhaHash = BCrypt.hashpw(usuario.getSenha(), BCrypt.gensalt());
+
+                                try {
+                                    // tenta salvar no Mongo
+                                    salvarNoMongo(usuario, senhaHash);
+
+                                    out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido e salvo no MongoDB.\"}");
+                                    System.out.println("Usuário válido: " + usuario);
+                                } catch (MongoException me) {
+                                    me.printStackTrace();
+                                    out.println("{\"status\": \"erro\", \"mensagem\": \"Erro ao salvar no banco de dados.\"}");
+                                    System.out.println("Erro ao salvar no MongoDB: " + me.getMessage());
+                                }
                             } else {
-                                out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes.\"}");
+                                out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes (nome, email, senha).\"}");
                                 System.out.println("Usuário inválido (campos obrigatórios ausentes).");
                             }
                         }
@@ -322,11 +328,16 @@ public class MainServer {
         resp.addProperty("id_usuario", idUsuario);
 
         if (narrativa != null) {
-            resp.addProperty("ponto_historia_atual", narrativa.getString("ponto_historia_atual"));
-            resp.addProperty("ultima_missao", narrativa.getString("ultima_missao"));
-            resp.addProperty("missao_atual", narrativa.getString("missao_atual"));
-            resp.addProperty("status_missao", narrativa.getString("status_missao"));
-            resp.addProperty("modulo_status", narrativa.getString("modulo_status"));
+            if (narrativa.get("ponto_historia_atual") != null)
+                resp.addProperty("ponto_historia_atual", narrativa.getString("ponto_historia_atual"));
+            if (narrativa.get("ultima_missao") != null)
+                resp.addProperty("ultima_missao", narrativa.getString("ultima_missao"));
+            if (narrativa.get("missao_atual") != null)
+                resp.addProperty("missao_atual", narrativa.getString("missao_atual"));
+            if (narrativa.get("status_missao") != null)
+                resp.addProperty("status_missao", narrativa.getString("status_missao"));
+            if (narrativa.get("modulo_status") != null)
+                resp.addProperty("modulo_status", narrativa.getString("modulo_status"));
             resp.addProperty("ultima_atualizacao",
                     narrativa.get("ultima_atualizacao") != null ? narrativa.get("ultima_atualizacao").toString() : null);
         }
