@@ -358,11 +358,16 @@ public class MainServer {
         resp.addProperty("id_usuario", idUsuario);
 
         if (narrativa != null) {
-            resp.addProperty("ponto_historia_atual", narrativa.getString("ponto_historia_atual"));
-            resp.addProperty("ultima_missao", narrativa.getString("ultima_missao"));
-            resp.addProperty("missao_atual", narrativa.getString("missao_atual"));
-            resp.addProperty("status_missao", narrativa.getString("status_missao"));
-            resp.addProperty("modulo_status", narrativa.getString("modulo_status"));
+            if (narrativa.get("ponto_historia_atual") != null)
+                resp.addProperty("ponto_historia_atual", narrativa.getString("ponto_historia_atual"));
+            if (narrativa.get("ultima_missao") != null)
+                resp.addProperty("ultima_missao", narrativa.getString("ultima_missao"));
+            if (narrativa.get("missao_atual") != null)
+                resp.addProperty("missao_atual", narrativa.getString("missao_atual"));
+            if (narrativa.get("status_missao") != null)
+                resp.addProperty("status_missao", narrativa.getString("status_missao"));
+            if (narrativa.get("modulo_status") != null)
+                resp.addProperty("modulo_status", narrativa.getString("modulo_status"));
             resp.addProperty("ultima_atualizacao",
                     narrativa.get("ultima_atualizacao") != null ? narrativa.get("ultima_atualizacao").toString() : null);
         }

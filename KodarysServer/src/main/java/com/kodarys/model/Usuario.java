@@ -2,9 +2,9 @@ package com.kodarys.model;
 
 public class Usuario {
     private String nome;
-    private Integer idade;   // se não estiver usando, pode remover depois
+    private Integer idade;   
     private String email;
-    private String senha;    // 👈 NOVO CAMPO
+    private String senha;    
 
     public Usuario() {}
 
@@ -26,7 +26,6 @@ public class Usuario {
                 "nome='" + nome + '\'' +
                 ", idade=" + idade +
                 ", email='" + email + '\'' +
-                // não exibimos senha aqui por segurança
                 '}';
     }
 }
