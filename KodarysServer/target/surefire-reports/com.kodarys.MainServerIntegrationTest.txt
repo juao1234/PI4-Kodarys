@@ -1,0 +1,10 @@
+-------------------------------------------------------------------------------
+Test set: com.kodarys.MainServerIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.512 s <<< FAILURE! -- in com.kodarys.MainServerIntegrationTest
+com.kodarys.MainServerIntegrationTest -- Time elapsed: 0.512 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Não foi possível conectar ao servidor na porta de teste 6000. Erro: Connection refused: connect
+	at com.kodarys.MainServerIntegrationTest.startServer(MainServerIntegrationTest.java:45)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+

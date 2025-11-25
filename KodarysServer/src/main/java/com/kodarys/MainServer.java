@@ -34,43 +34,58 @@ public class MainServer {
     private static MongoCollection<Document> usuariosCollection;
     private static MongoCollection<Document> historicoMissoesCollection;
     private static MongoCollection<Document> estadoNarrativaCollection;
-    private static final String[] MISSION_SEQUENCE = new String[] { "M01_INTRO", "M02_VARIAVEIS", "M03_INPUT", "M04_OPERADORES" };
+    private static final String[] MISSION_SEQUENCE = new String[] {
+            "M01_INTRO", "M02_VARIAVEIS", "M03_INPUT", "M04_OPERADORES"
+    };
 
-    public static void main(String[] args) {
-        int port = 5000;
-        Gson gson = new Gson();
+    // ======= CAMPOS PARA START/STOP DO SERVIDOR =========
+    private ServerSocket serverSocket;
+    private boolean running = false;
+    private int port;
 
+    public MainServer(int port) {
+        this.port = port;
+    }
+
+    // ======================================================
+    // ================== MÉTODO START ======================
+    // ======================================================
+    public void start() throws IOException {
         inicializarMongo();
 
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Servidor TCP rodando na porta " + port + "...");
+        serverSocket = new ServerSocket(port);
+        running = true;
 
-            while (true) {
-                try (Socket socket = serverSocket.accept()) {
-                    System.out.println("Cliente conectado: " + socket.getInetAddress());
+        System.out.println("Servidor TCP rodando na porta " + port + "...");
 
-                    BufferedReader in = new BufferedReader(
-                            new InputStreamReader(socket.getInputStream()));
-                    PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+        Gson gson = new Gson();
 
-                    String json = in.readLine();
-                    System.out.println("Recebido: " + json);
+        while (running) {
+            try (Socket socket = serverSocket.accept()) {
+                System.out.println("Cliente conectado: " + socket.getInetAddress());
 
-                    try {
-                        JsonObject root = gson.fromJson(json, JsonObject.class);
+                BufferedReader in = new BufferedReader(
+                        new InputStreamReader(socket.getInputStream()));
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
-                        if (root != null && root.has("tipo")) {
-                            String response = processarEvento(root);
-                            out.println(response);
-                        } else {
-                            Usuario usuario = gson.fromJson(json, Usuario.class);
+                String json = in.readLine();
+                System.out.println("Recebido: " + json);
 
-                            if (usuario != null &&
-                                    usuario.getNome() != null &&
-                                    usuario.getEmail() != null) {
-                                
+                try {
+                    JsonObject root = gson.fromJson(json, JsonObject.class);
+
+                    if (root != null && root.has("tipo")) {
+                        String response = processarEvento(root);
+                        out.println(response);
+                    } else {
+                        Usuario usuario = gson.fromJson(json, Usuario.class);
+
+                        if (usuario != null &&
+                                usuario.getNome() != null &&
+                                usuario.getEmail() != null) {
+
                             try {
-                                // tenta salvar no Mongo
+                                String senhaHash = BCrypt.hashpw(usuario.getSenha(), BCrypt.gensalt());
                                 salvarNoMongo(usuario, senhaHash);
 
                                 out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido e salvo no MongoDB.\"}");
@@ -80,33 +95,56 @@ public class MainServer {
                                 out.println("{\"status\": \"erro\", \"mensagem\": \"Erro ao salvar no banco de dados.\"}");
                                 System.out.println("Erro ao salvar no MongoDB: " + me.getMessage());
                             }
-                            } else {
-                                out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes.\"}");
-                                System.out.println("Usuário inválido (campos obrigatórios ausentes).");
-                            }
-                        }
-                    } catch (JsonSyntaxException e) {
-                        out.println("{\"status\": \"erro\", \"mensagem\": \"JSON inválido.\"}");
-                        System.out.println("Erro de sintaxe no JSON: " + e.getMessage());
-                    }
 
-                    System.out.println("Conexão encerrada.\n");
-                } catch (IOException e) {
+                        } else {
+                            out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes.\"}");
+                            System.out.println("Usuário inválido (campos obrigatórios ausentes).");
+                        }
+                    }
+                } catch (JsonSyntaxException e) {
+                    out.println("{\"status\": \"erro\", \"mensagem\": \"JSON inválido.\"}");
+                    System.out.println("Erro de sintaxe no JSON: " + e.getMessage());
+                }
+
+                System.out.println("Conexão encerrada.\n");
+
+            } catch (IOException e) {
+                if (running) {
                     e.printStackTrace();
                     System.out.println("Erro ao tratar cliente.");
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println("Erro ao iniciar servidor TCP.");
-        } finally {
-            if (mongoClient != null) {
-                mongoClient.close();
-            }
+        }
+
+        if (mongoClient != null) mongoClient.close();
+        System.out.println("Servidor parado.");
+    }
+
+    // ======================================================
+    // =================== MÉTODO STOP ======================
+    // ======================================================
+    public void stop() throws IOException {
+        running = false;
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            serverSocket.close(); // força IOException no accept() → encerra loop
         }
     }
 
-    // ---------------------- MONGO + DOTENV ----------------------
+    // ======================================================
+    // ==================== MAIN ORIGINAL ===================
+    // ======================================================
+    public static void main(String[] args) {
+        try {
+            MainServer server = new MainServer(5000);
+            server.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ======================================================
+    // =================== RESTANTE IGUAL ===================
+    // ======================================================
 
     private static void inicializarMongo() {
         Dotenv dotenv = Dotenv.load();
@@ -149,8 +187,6 @@ public class MainServer {
         estadoNarrativaCollection = db.getCollection(narrativaName);
 
         System.out.println("Conectado ao MongoDB.");
-        System.out.println("DB: " + dbName + " | Coleção: " + collectionName);
-        System.out.println("Coleção histórico: " + historicoName + " | Coleção narrativa: " + narrativaName);
     }
 
     private static void salvarNoMongo(Usuario u, String senhaHash) {

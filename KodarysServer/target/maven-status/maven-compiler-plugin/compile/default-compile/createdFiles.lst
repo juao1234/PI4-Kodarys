@@ -1,4 +1,4 @@
-com/kodarys/HttpToTcpServer.class
-com/kodarys/MainServer.class
-com/kodarys/ClienteTCP.class
-com/kodarys/model/Usuario.class
+com\kodarys\HttpToTcpServer.class
+com\kodarys\model\Usuario.class
+com\kodarys\ClienteTCP.class
+com\kodarys\MainServer.class
