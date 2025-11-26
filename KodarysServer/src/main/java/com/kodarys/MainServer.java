@@ -9,6 +9,9 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 import org.bson.Document;
 
@@ -17,6 +20,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.kodarys.model.Dialogo;
+import com.kodarys.model.HistoricoMissao;
 import com.kodarys.model.Usuario;
 import com.mongodb.MongoException;
 import com.mongodb.client.MongoClient;
@@ -231,33 +236,60 @@ public class MainServer {
     }
 
     private static void registrarDialogo(String idUsuario, JsonObject root) {
+        // Converte o conteúdo do diálogo em um objeto Dialogo
+        String texto = root.has("texto") ? root.get("texto").getAsString() : "";
+        String persona = root.has("persona") ? root.get("persona").getAsString() : "narrador";
+        long timestamp = System.currentTimeMillis();
+
+        Dialogo dialogo = new Dialogo(texto, persona, timestamp);
+
         Document filtro = new Document("id_usuario", idUsuario);
+        Document pushDoc = new Document("texto", dialogo.getTexto())
+                .append("persona", dialogo.getPersona())
+                .append("timestamp", dialogo.getTimestamp());
 
         Document update = new Document("$set", new Document("id_usuario", idUsuario))
-                .append("$push", new Document("dialogos_vistos",
-                        new Document("texto", root.has("texto") ? root.get("texto").getAsString() : "")
-                                .append("persona", root.has("persona") ? root.get("persona").getAsString() : "narrador")
-                                .append("timestamp", System.currentTimeMillis())));
+                .append("$push", new Document("dialogos_vistos", pushDoc));
 
         estadoNarrativaCollection.updateOne(filtro, update, new com.mongodb.client.model.UpdateOptions().upsert(true));
     }
 
     private static String registrarTentativa(String idUsuario, String idMissao, JsonObject root) {
+        // Constrói o model HistoricoMissao a partir do JsonObject
+        HistoricoMissao hm = new HistoricoMissao();
+        hm.setIdUsuario(idUsuario);
+        hm.setIdMissao(idMissao);
         String codigo = root.has("codigo_submetido") ? root.get("codigo_submetido").getAsString() : "";
         String erro = root.has("erro") ? root.get("erro").getAsString() : "";
-        String resultado = validarMissao(idMissao, codigo, erro);
+        hm.setCodigoSubmetido(codigo);
+        hm.setErro(erro);
+        hm.setData(new Date());
 
-        Document tentativa = new Document("id_usuario", idUsuario)
-                .append("id_missao", idMissao)
-                .append("resultado", resultado)
-                .append("data", new java.util.Date())
-                .append("codigo_submetido", codigo);
-
-        if (root.has("output")) {
-            tentativa.append("output", jsonArrayToStringList(root.get("output")));
+        // output (array)
+        List<String> outputList = new ArrayList<>();
+        if (root.has("output") && root.get("output").isJsonArray()) {
+            JsonArray arr = root.getAsJsonArray("output");
+            for (JsonElement e : arr) {
+                outputList.add(e.getAsString());
+            }
         }
-        if (!erro.isEmpty()) {
-            tentativa.append("erro", erro);
+        hm.setOutput(outputList);
+
+        String resultado = validarMissao(idMissao, codigo, erro);
+        hm.setResultado(resultado);
+
+        // Converte o model para Document manualmente (Opção A)
+        Document tentativa = new Document("id_usuario", hm.getIdUsuario())
+                .append("id_missao", hm.getIdMissao())
+                .append("resultado", hm.getResultado())
+                .append("data", hm.getData())
+                .append("codigo_submetido", hm.getCodigoSubmetido());
+
+        if (!hm.getOutput().isEmpty()) {
+            tentativa.append("output", hm.getOutput());
+        }
+        if (hm.getErro() != null && !hm.getErro().isEmpty()) {
+            tentativa.append("erro", hm.getErro());
         }
 
         historicoMissoesCollection.insertOne(tentativa);

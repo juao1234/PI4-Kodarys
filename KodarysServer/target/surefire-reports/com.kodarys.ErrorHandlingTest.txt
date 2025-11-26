@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.kodarys.ErrorHandlingTest
 -------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.760 s <<< FAILURE! -- in com.kodarys.ErrorHandlingTest
-com.kodarys.ErrorHandlingTest.slowClientThatSendsNothingTimesOut -- Time elapsed: 0.114 s <<< ERROR!
+Tests run: 2, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 2.623 s <<< FAILURE! -- in com.kodarys.ErrorHandlingTest
+com.kodarys.ErrorHandlingTest.slowClientThatSendsNothingTimesOut -- Time elapsed: 0.104 s <<< ERROR!
 java.net.ConnectException: Connection refused: connect
 	at java.base/sun.nio.ch.Net.connect0(Native Method)
 	at java.base/sun.nio.ch.Net.connect(Net.java:535)
@@ -18,7 +18,7 @@ java.net.ConnectException: Connection refused: connect
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
 
-com.kodarys.ErrorHandlingTest.emptyPayloadReturnsError -- Time elapsed: 0.059 s <<< ERROR!
+com.kodarys.ErrorHandlingTest.emptyPayloadReturnsError -- Time elapsed: 0.054 s <<< ERROR!
 java.net.ConnectException: Connection refused: getsockopt
 	at java.base/sun.nio.ch.Net.pollConnect(Native Method)
 	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:628)

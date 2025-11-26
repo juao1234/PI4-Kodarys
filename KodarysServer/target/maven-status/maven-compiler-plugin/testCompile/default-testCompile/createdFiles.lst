@@ -1,4 +1,6 @@
 com\kodarys\ErrorHandlingTest.class
 com\kodarys\MainServerIntegrationTest.class
 com\kodarys\TestHelper.class
-com\kodarys\UsuarioModelTest.class
+com\kodarys\model\NarrativaModelTest.class
+com\kodarys\model\HistoricoMissaoModelTest.class
+com\kodarys\model\UsuarioModelTest.class

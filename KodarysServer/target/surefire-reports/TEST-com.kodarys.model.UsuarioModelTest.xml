@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.kodarys.ErrorHandlingTest" time="2.623" tests="2" errors="2" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.kodarys.model.UsuarioModelTest" time="0.016" tests="3" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="24"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -58,42 +58,7 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="68.0"/>
   </properties>
-  <testcase name="slowClientThatSendsNothingTimesOut" classname="com.kodarys.ErrorHandlingTest" time="0.104">
-    <error message="Connection refused: connect" type="java.net.ConnectException"><![CDATA[java.net.ConnectException: Connection refused: connect
-	at java.base/sun.nio.ch.Net.connect0(Native Method)
-	at java.base/sun.nio.ch.Net.connect(Net.java:535)
-	at java.base/sun.nio.ch.Net.connect(Net.java:524)
-	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:574)
-	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:282)
-	at java.base/java.net.Socket.connect(Socket.java:665)
-	at java.base/java.net.Socket.connect(Socket.java:603)
-	at java.base/java.net.Socket.<init>(Socket.java:470)
-	at java.base/java.net.Socket.<init>(Socket.java:276)
-	at com.kodarys.ErrorHandlingTest.slowClientThatSendsNothingTimesOut(ErrorHandlingTest.java:56)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-]]></error>
-    <system-out><![CDATA[MONGO_COLLECTION_HISTORICO não definido. Usando padrão: historico_missoes
-MONGO_COLLECTION_NARRATIVA não definido. Usando padrão: estado_narrativa
-]]></system-out>
-    <system-err><![CDATA[nov. 26, 2025 6:19:17 PM com.mongodb.internal.diagnostics.logging.Loggers shouldUseSLF4J
-WARNING: SLF4J not found on the classpath.  Logging is disabled for the 'org.mongodb.driver' component
-]]></system-err>
-  </testcase>
-  <testcase name="emptyPayloadReturnsError" classname="com.kodarys.ErrorHandlingTest" time="0.054">
-    <error message="Connection refused: getsockopt" type="java.net.ConnectException"><![CDATA[java.net.ConnectException: Connection refused: getsockopt
-	at java.base/sun.nio.ch.Net.pollConnect(Native Method)
-	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:628)
-	at java.base/sun.nio.ch.NioSocketImpl.timedFinishConnect(NioSocketImpl.java:533)
-	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:583)
-	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:282)
-	at java.base/java.net.Socket.connect(Socket.java:665)
-	at com.kodarys.TestHelper.sendAndReceive(TestHelper.java:20)
-	at com.kodarys.ErrorHandlingTest.emptyPayloadReturnsError(ErrorHandlingTest.java:48)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-]]></error>
-  </testcase>
+  <testcase name="parseJsonMissingOptionalSenha" classname="com.kodarys.model.UsuarioModelTest" time="0.003"/>
+  <testcase name="parseFullJsonToUsuario" classname="com.kodarys.model.UsuarioModelTest" time="0.002"/>
+  <testcase name="parseJsonWithMissingFieldsProducesNulls" classname="com.kodarys.model.UsuarioModelTest" time="0.003"/>
 </testsuite>
