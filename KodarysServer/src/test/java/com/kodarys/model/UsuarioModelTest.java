@@ -1,7 +1,6 @@
-package com.kodarys;
+package com.kodarys.model;
 
 import com.google.gson.Gson;
-import com.kodarys.model.Usuario;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
