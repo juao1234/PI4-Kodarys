@@ -130,7 +130,7 @@ interface CodeEditorProps {
   runCode: () => void;
   terminalOutput: string[];
   executionError: string | null;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({
@@ -142,88 +142,58 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   onClose,
 }) => {
   return (
-    <div className="absolute inset-0 z-40 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
-      <div className="w-full max-w-6xl h-[85vh] flex flex-col md:flex-row gap-4">
-        <div className="md:w-1/3 flex flex-col gap-4">
-          <div className="bg-black/40 border border-white/10 rounded-2xl p-6 flex-1 overflow-y-auto shadow-2xl backdrop-blur-sm">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-xs font-mono uppercase tracking-widest text-purple-400">Mission M01</span>
+    <div className="w-full h-full flex flex-col gap-4">
+      <div className="flex-1 bg-[#0f172a]/90 rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden relative backdrop-blur-sm">
+        <div className="flex items-center justify-between px-4 py-3 bg-white/10 border-b border-white/5">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-500/50" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
+              <div className="w-3 h-3 rounded-full bg-green-500/50" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-4">Speak to the Gate</h2>
-            <div className="space-y-4 text-slate-300 text-sm leading-relaxed">
-              <p>The runes on the gate shimmer with an expectant hum. They await a command of pure logic.</p>
-              <p>
-                <strong>Task:</strong> Write a Python script that greets the gate properly using{' '}
-                <code className="text-purple-300 bg-purple-900/30 px-1 rounded">print()</code>.
-              </p>
-              <div className="bg-black/40 p-4 rounded-lg border border-white/5 mt-4">
-                <h3 className="text-purple-300 font-semibold mb-2">Grimoire Notes:</h3>
-                <ul className="list-disc list-inside space-y-2 text-slate-400">
-                  <li>
-                    Strings must be wrapped in quotes: <span className="font-mono text-yellow-200">"Hello"</span>
-                  </li>
-                  <li>Variables store power (data) for later use.</li>
-                  <li>
-                    Use the <span className="font-mono text-green-300">Execute</span> button to cast your spell.
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <span className="ml-3 text-xs text-slate-400 font-mono">script.py</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={runCode}
+              className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-md transition-all shadow-lg shadow-purple-900/20"
+            >
+              <Play className="w-3 h-3 fill-current" /> Run Code
+            </button>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="md:w-2/3 flex flex-col gap-4">
-          <div className="flex-1 bg-black/40 rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden relative backdrop-blur-sm">
-            <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/5">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/50" />
-                </div>
-                <span className="ml-3 text-xs text-slate-400 font-mono">script.py</span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={runCode}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-md transition-all shadow-lg shadow-purple-900/20"
-                >
-                  <Play className="w-3 h-3 fill-current" /> Run Code
-                </button>
-                <button
-                  onClick={onClose}
-                  className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+        <textarea
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          spellCheck={false}
+          className="flex-1 w-full bg-[#0c1224] p-4 font-mono text-sm text-gray-200 focus:outline-none resize-none"
+          placeholder="# Begin your incantation..."
+        />
 
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              spellCheck={false}
-              className="flex-1 w-full bg-[#0f1117]/60 p-4 font-mono text-sm text-gray-300 focus:outline-none resize-none"
-              placeholder="# Begin your incantation..."
-            />
-
-            <div className="h-1/3 bg-black/80 border-t border-white/10 p-4 font-mono text-sm overflow-y-auto">
-              <div className="flex items-center gap-2 text-slate-500 mb-2 text-xs uppercase tracking-wider">
-                <Terminal className="w-3 h-3" /> Output Log
-              </div>
-              {terminalOutput.length === 0 && !executionError && (
-                <span className="text-slate-600 italic opacity-50">...awaiting execution...</span>
-              )}
-              {terminalOutput.map((line, idx) => (
-                <div key={idx} className="text-green-400 whitespace-pre-wrap animate-pulse-fast">{`> ${line}`}</div>
-              ))}
-              {executionError && (
-                <div className="text-red-400 mt-2 whitespace-pre-wrap border-l-2 border-red-500 pl-3">
-                  {`Error: ${executionError}`}
-                </div>
-              )}
-            </div>
+        <div className="h-1/3 bg-[#0b1021] border-t border-white/10 p-4 font-mono text-sm overflow-y-auto">
+          <div className="flex items-center gap-2 text-slate-400 mb-2 text-xs uppercase tracking-wider">
+            <Terminal className="w-3 h-3" /> Output Log
           </div>
+          {terminalOutput.length === 0 && !executionError && (
+            <span className="text-slate-600 italic opacity-70">...awaiting execution...</span>
+          )}
+          {terminalOutput.map((line, idx) => (
+            <div key={idx} className="text-green-300 whitespace-pre-wrap">{`> ${line}`}</div>
+          ))}
+          {executionError && (
+            <div className="text-red-300 mt-2 whitespace-pre-wrap border-l-2 border-red-500/60 pl-3">
+              {`Error: ${executionError}`}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -392,6 +362,7 @@ export default function LabPage() {
   };
 
   const runCode = () => {
+    setStage('practice');
     const output: string[] = [];
     const errors: string[] = [];
     const vars: Record<string, string | number> = {};
@@ -613,170 +584,123 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
           backgroundPosition: 'center',
         }}
       />
-      <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/20 via-black/40 to-black/95 pointer-events-none" />
-      <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-900/10 via-transparent to-black/40 pointer-events-none mix-blend-overlay" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/60 via-black/75 to-black/95 pointer-events-none" />
+      <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-900/10 via-transparent to-black/50 pointer-events-none mix-blend-overlay" />
 
       <NavbarLocal />
 
-      <main className="relative z-20 w-full h-full flex flex-col items-center justify-end pb-8 px-4">
-        <div className="absolute top-4 right-6 z-30 flex items-center gap-2 bg-black/40 border border-white/10 rounded-full px-3 py-1 text-xs text-slate-200 backdrop-blur-md">
-          <span className="uppercase tracking-wide text-slate-400 font-mono">Usuário</span>
-          <input
-            value={userId}
-            onChange={(e) => updateUserId(e.target.value)}
-            className="bg-transparent border-b border-white/20 focus:border-purple-400 outline-none px-1 text-slate-100 placeholder-slate-500 w-32"
-            placeholder="demo-user"
-          />
-        </div>
+      <main className="relative z-20 w-full h-full flex flex-col items-center justify-center px-4 py-6">
+        <div className="w-full max-w-7xl flex flex-col gap-4 h-full">
+          <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-5 flex-1 min-h-[80vh]">
+            <div className="bg-[#0b1021]/85 border border-white/10 rounded-2xl p-4 flex flex-col overflow-hidden shadow-2xl shadow-black/50">
+              <div
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto mb-4 pr-2 space-y-4 scroll-smooth mask-image-gradient"
+                style={{ maskImage: 'linear-gradient(to bottom, transparent, black 8%, black 100%)' }}
+              >
+                {chatMessages.map((msg, idx) => {
+                  const match = msg.text.match(/^([^:]+):(.*)/s);
+                  const name = match ? match[1].trim() : msg.role === 'user' ? 'Human' : 'Unknown';
+                  const content = match ? match[2] : msg.text;
+                  const codeMatch = msg.text.match(/```(?:python)?\\s*([\\s\\S]*?)```/i);
+                  const snippet = codeMatch ? codeMatch[1].trim() : null;
 
-        <div
-          ref={chatContainerRef}
-          className="w-full max-w-4xl h-[70vh] overflow-y-auto mb-4 pr-2 space-y-4 scroll-smooth mask-image-gradient flex flex-col items-center"
-          style={{ maskImage: 'linear-gradient(to bottom, transparent, black 10%, black 100%)' }}
-        >
-          <div className="w-full max-w-3xl mb-2 px-4">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-slate-200 text-sm">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-purple-300 font-mono mb-1">
-                <Sparkles className="w-3 h-3" /> Objetivo da missão
-              </div>
-              <p className="text-slate-100">
-                {MISSION_OBJECTIVES[currentMission] ?? MISSION_OBJECTIVES[DEFAULT_MISSION]}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">
-                Missão atual: {currentMission} • Status: {missionStatus}
-              </p>
-            </div>
-          </div>
+                  let nameColor = 'text-slate-400';
+                  if (msg.role === 'user') nameColor = 'text-cyan-300 shadow-cyan-500/20 drop-shadow-sm';
+                  else if (name.includes('Sygnus')) nameColor = PERSONAS.sygnus.color;
+                  else if (name.includes('Lyra')) nameColor = PERSONAS.lyra.color;
+                  else if (name.includes('Raxos')) nameColor = PERSONAS.raxos.color;
+                  else if (name.includes('Narrador') || name.includes('Sistema')) nameColor = PERSONAS.narrador.color;
 
-          <div className="h-10" />
-
-          {chatMessages.map((msg, idx) => {
-            const match = msg.text.match(/^([^:]+):(.*)/s);
-            const name = match ? match[1].trim() : msg.role === 'user' ? 'Human' : 'Unknown';
-            const content = match ? match[2] : msg.text;
-            const codeMatch = msg.text.match(/```(?:python)?\\s*([\\s\\S]*?)```/i);
-            const snippet = codeMatch ? codeMatch[1].trim() : null;
-
-            let nameColor = 'text-slate-400';
-            if (msg.role === 'user') nameColor = 'text-cyan-300 shadow-cyan-500/20 drop-shadow-sm';
-            else if (name.includes('Sygnus')) nameColor = PERSONAS.sygnus.color;
-            else if (name.includes('Lyra')) nameColor = PERSONAS.lyra.color;
-            else if (name.includes('Raxos')) nameColor = PERSONAS.raxos.color;
-            else if (name.includes('Narrador') || name.includes('Sistema')) nameColor = PERSONAS.narrador.color;
-
-            return (
-              <div key={idx} className="group animate-fade-in-up w-full flex justify-center">
-                <div className="w-full max-w-3xl flex flex-col gap-1 py-1 px-4 rounded-lg hover:bg-white/5 transition-colors duration-300">
-                  <span className={`text-sm font-bold font-mono uppercase tracking-wider ${nameColor}`}>
-                    {msg.role === 'user' ? 'Aprendiz' : name}
-                  </span>
-                  <p className="text-slate-200 text-sm md:text-base leading-relaxed font-light opacity-90 group-hover:opacity-100 whitespace-pre-wrap italic">
-                    {content}
-                  </p>
-                  {snippet && (
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => setCode(snippet)}
-                        className="text-xs px-2 py-1 rounded bg-purple-700/60 text-white border border-purple-500/50 hover:bg-purple-600 transition-colors"
-                      >
-                        Enviar código para IDE
-                      </button>
+                  return (
+                    <div key={idx} className="group animate-fade-in-up w-full flex justify-center">
+                      <div className="w-full max-w-3xl flex flex-col gap-1 py-1 px-4 rounded-lg hover:bg-white/5 transition-colors duration-300">
+                        <span className={`text-sm font-bold font-mono uppercase tracking-wider ${nameColor}`}>
+                          {msg.role === 'user' ? 'Aprendiz' : name}
+                        </span>
+                        <p className="text-slate-200 text-sm md:text-base leading-relaxed font-light opacity-95 group-hover:opacity-100 whitespace-pre-wrap">
+                          {content}
+                        </p>
+                        {snippet && (
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => {
+                                setCode(snippet);
+                                setStage('practice');
+                              }}
+                              className="text-xs px-2 py-1 rounded bg-purple-700/60 text-white border border-purple-500/50 hover:bg-purple-600 transition-colors"
+                            >
+                              Enviar código para IDE
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  );
+                })}
+                {isStreaming && (
+                  <div className="flex items-center gap-2 px-2 opacity-50">
+                    <span className="text-purple-400 font-mono text-xs uppercase animate-pulse">Recebendo sinal...</span>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div className="glass-panel rounded-2xl p-1 flex items-center shadow-2xl shadow-purple-900/10 bg-[#0f172a]/80 border border-white/10">
+                <textarea
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  placeholder={isStreaming ? 'O éter está ocupado...' : 'Fale seu destino... (Shift+Enter para nova linha)'}
+                  className="flex-1 bg-transparent border-none text-white placeholder-slate-500 focus:ring-0 resize-none min-h-[50px] max-h-[120px] py-3 px-4 text-base"
+                  disabled={isStreaming}
+                  rows={1}
+                />
+                <div className="flex items-center gap-2 pr-2 pb-2">
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={!chatInput.trim() || isStreaming}
+                    className={`p-2 rounded-xl transition-all duration-200 ${
+                      chatInput.trim() && !isStreaming
+                        ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-500/25'
+                        : 'bg-white/5 text-slate-600 cursor-not-allowed'
+                    } ml-[1px]`}
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-            );
-          })}
-          {isStreaming && (
-            <div className="flex items-center gap-2 px-2 opacity-50">
-              <span className="text-purple-400 font-mono text-xs uppercase animate-pulse">Recebendo sinal...</span>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
 
-        <div className="w-full max-w-3xl relative">
-          {stage === 'story' && (
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-3 pb-2 opacity-0 hover:opacity-100 transition-opacity duration-300">
-              <button
-                onClick={() => setStage('practice')}
-                className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 text-purple-200 px-4 py-1.5 rounded-full text-xs hover:bg-purple-900/40 transition-all"
-              >
-                <Code2 className="w-3 h-3" /> Abrir Grimório (IDE)
-              </button>
-              <button className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 text-slate-300 px-4 py-1.5 rounded-full text-xs hover:bg-slate-800/40 transition-all">
-                <HelpCircle className="w-3 h-3" /> Ajuda
-              </button>
             </div>
-          )}
 
-          <div className="glass-panel rounded-2xl p-1 flex items-center shadow-2xl shadow-purple-900/10">
-            <textarea
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              placeholder={isStreaming ? 'O éter está ocupado...' : 'Fale seu destino... (Shift+Enter para nova linha)'}
-              className="flex-1 bg-transparent border-none text-white placeholder-slate-500 focus:ring-0 resize-none min-h-[50px] max-h-[120px] py-3 px-4 text-base"
-              disabled={isStreaming}
-              rows={1}
-            />
-            <div className="flex items-center gap-2 pr-2 pb-2">
-              <button
-                onClick={() => sendMessage()}
-                disabled={!chatInput.trim() || isStreaming}
-                className={`p-2 rounded-xl transition-all duration-200 ${
-                  chatInput.trim() && !isStreaming
-                    ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-500/25'
-                    : 'bg-white/5 text-slate-600 cursor-not-allowed'
-                } ml-[1px]`}
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="text-center mt-3">
-            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">
-              Chronicles of Kodarys • Módulo 01 • <span className="text-purple-500/60">Conectado</span>
-            </p>
-            <div className="mt-2 text-xs text-slate-400 flex justify-center gap-3">
-              <span className="px-2 py-1 bg-white/5 rounded-full border border-white/10">
-                Última missão: {progress.ultimaMissao ?? '—'}
-              </span>
-              <span className="px-2 py-1 bg-white/5 rounded-full border border-white/10">
-                Última tentativa: {progress.ultimaTentativaMissao ?? '—'} ({progress.ultimaTentativaResultado ?? '—'})
-              </span>
-              <span className="px-2 py-1 bg-white/5 rounded-full border border-white/10">
-                História: {progress.pontoHistoria ?? '—'}
-              </span>
+            <div className="bg-[#0b1021]/85 border border-white/10 rounded-2xl p-4 backdrop-blur-lg shadow-2xl shadow-black/50 min-h-[60vh] flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-200 font-semibold">
+                  <Code2 className="w-4 h-4 text-purple-300" />
+                  <span>Grimório do Aprendiz</span>
+                </div>
+                <div className="text-[11px] text-purple-300 font-mono uppercase tracking-[0.2em]">
+                  {stage === 'practice' ? 'Prática ativa' : 'Aberto'}
+                </div>
+              </div>
+              <div className="flex-1 min-h-[50vh]">
+                <CodeEditor
+                  code={code}
+                  setCode={setCode}
+                  runCode={runCode}
+                  terminalOutput={terminalOutput}
+                  executionError={executionError}
+                />
+              </div>
             </div>
           </div>
         </div>
       </main>
-
-      {stage === 'practice' && (
-        <CodeEditor
-          code={code}
-          setCode={setCode}
-          runCode={runCode}
-          terminalOutput={terminalOutput}
-          executionError={executionError}
-          onClose={() => setStage('story')}
-        />
-      )}
-
-      <button
-        onClick={() => setStage('practice')}
-        className="fixed bottom-6 right-6 z-30 p-3 rounded-full bg-purple-600 text-white shadow-lg shadow-purple-900/30 hover:bg-purple-500 transition-colors flex items-center gap-2"
-      >
-        <Code2 className="w-5 h-5" />
-        <span className="text-sm font-semibold">IDE</span>
-      </button>
     </div>
   );
 }
