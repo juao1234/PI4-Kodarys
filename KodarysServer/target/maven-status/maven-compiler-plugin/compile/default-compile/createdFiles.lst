@@ -1,4 +1,7 @@
-com/kodarys/HttpToTcpServer.class
-com/kodarys/MainServer.class
-com/kodarys/ClienteTCP.class
-com/kodarys/model/Usuario.class
+com\kodarys\model\HistoricoMissao.class
+com\kodarys\HttpToTcpServer.class
+com\kodarys\ClienteTCP.class
+com\kodarys\MainServer.class
+com\kodarys\model\Dialogo.class
+com\kodarys\model\Usuario.class
+com\kodarys\model\Narrativa.class
