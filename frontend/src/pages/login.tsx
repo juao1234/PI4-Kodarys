@@ -32,7 +32,7 @@ export default function LoginPage() {
     console.log("Enviando login:", usuario);
 
     setLoading(true);
-    let resposta;
+    let resposta: Response;
 
     try {
       resposta = await fetch("http://localhost:8080/api/usuario/login", {
@@ -53,9 +53,8 @@ export default function LoginPage() {
 
       if (data.status === "ok") {
         alert("Login realizado com sucesso!");
-        // aqui você pode guardar token, usuário, etc.
-        signIn?.(); // só se seu contexto precisar
-        navigate("/");
+        await signIn(email); // 👈 salva email + nível 1 no contexto
+        navigate("/");       // 👈 volta pra Home
       } else {
         alert(data.mensagem || "Erro ao fazer login.");
       }

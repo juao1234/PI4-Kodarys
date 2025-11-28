@@ -40,7 +40,10 @@ export default function HomePage() {
 
         {/* 🔵 Botão de teste */}
         <div className="!p-4 text-center">
-          <button onClick={enviarDadosTeste} className="text-white bg-blue-600 rounded-lg mt-4 !px-9 !py-4 cursor-pointer hover:bg-blue-700 hover:shadow-md hover:shadow-blue-800">
+          <button
+            onClick={enviarDadosTeste}
+            className="text-white bg-blue-600 rounded-lg mt-4 !px-9 !py-4 cursor-pointer hover:bg-blue-700 hover:shadow-md hover:shadow-blue-800"
+          >
             🔧 Enviar dados de teste para o servidor Java
           </button>
         </div>
