@@ -29,6 +29,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.Filters;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.mindrot.jbcrypt.BCrypt;
@@ -79,31 +80,61 @@ public class MainServer {
                 try {
                     JsonObject root = gson.fromJson(json, JsonObject.class);
 
+                    // ---------- EVENTOS (tem campo "tipo") ----------
                     if (root != null && root.has("tipo")) {
                         String response = processarEvento(root);
                         out.println(response);
                     } else {
+                        // ---------- CADASTRO ou LOGIN ----------
                         Usuario usuario = gson.fromJson(json, Usuario.class);
 
-                        if (usuario != null &&
-                                usuario.getNome() != null &&
-                                usuario.getEmail() != null) {
-
+                        if (isCadastro(usuario)) {
+                            // CADASTRO
                             try {
                                 String senhaHash = BCrypt.hashpw(usuario.getSenha(), BCrypt.gensalt());
                                 salvarNoMongo(usuario, senhaHash);
 
-                                out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido e salvo no MongoDB.\"}");
-                                System.out.println("Usuário válido: " + usuario);
+                                out.println("{\"status\": \"ok\", \"mensagem\": \"Usuário cadastrado e salvo no MongoDB.\"}");
+                                System.out.println("Cadastro OK: " + usuario);
                             } catch (MongoException me) {
                                 me.printStackTrace();
                                 out.println("{\"status\": \"erro\", \"mensagem\": \"Erro ao salvar no banco de dados.\"}");
                                 System.out.println("Erro ao salvar no MongoDB: " + me.getMessage());
                             }
 
+                        } else if (isLogin(usuario)) {
+                            // LOGIN
+                            try {
+                                Document doc = usuariosCollection
+                                        .find(Filters.eq("email", usuario.getEmail()))
+                                        .first();
+
+                                if (doc == null) {
+                                    out.println("{\"status\":\"erro\",\"mensagem\":\"Usuário não encontrado.\"}");
+                                    System.out.println("Login falhou: usuário não encontrado (" + usuario.getEmail() + ")");
+                                } else {
+                                    String senhaHash = doc.getString("senhaHash");
+
+                                    if (senhaHash == null) {
+                                        out.println("{\"status\":\"erro\",\"mensagem\":\"Usuário sem senha cadastrada.\"}");
+                                        System.out.println("Login falhou: usuário sem senha hash (" + usuario.getEmail() + ")");
+                                    } else if (BCrypt.checkpw(usuario.getSenha(), senhaHash)) {
+                                        out.println("{\"status\":\"ok\",\"mensagem\":\"Login realizado com sucesso.\"}");
+                                        System.out.println("Login OK para: " + usuario.getEmail());
+                                    } else {
+                                        out.println("{\"status\":\"erro\",\"mensagem\":\"Senha incorreta.\"}");
+                                        System.out.println("Login falhou: senha incorreta para " + usuario.getEmail());
+                                    }
+                                }
+                            } catch (MongoException me) {
+                                me.printStackTrace();
+                                out.println("{\"status\":\"erro\",\"mensagem\":\"Erro ao acessar o banco de dados.\"}");
+                                System.out.println("Erro de Mongo no login: " + me.getMessage());
+                            }
+
                         } else {
-                            out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes.\"}");
-                            System.out.println("Usuário inválido (campos obrigatórios ausentes).");
+                            out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes ou inválidos.\"}");
+                            System.out.println("Requisição inválida para cadastro/login: " + json);
                         }
                     }
                 } catch (JsonSyntaxException e) {
@@ -147,8 +178,27 @@ public class MainServer {
         }
     }
 
+    // =================== HELPERS: cadastro vs login ===================
+
+    private static boolean isCadastro(Usuario u) {
+        return u != null &&
+                u.getNome() != null && !u.getNome().isBlank() &&
+                u.getEmail() != null && !u.getEmail().isBlank() &&
+                u.getSenha() != null && !u.getSenha().isBlank() &&
+                u.getIdade() != null && u.getIdade() > 0;
+    }
+
+    private static boolean isLogin(Usuario u) {
+        // Para login, esperamos só email + senha (sem nome/idade)
+        return u != null &&
+                u.getEmail() != null && !u.getEmail().isBlank() &&
+                u.getSenha() != null && !u.getSenha().isBlank() &&
+                (u.getNome() == null || u.getNome().isBlank()) &&
+                u.getIdade() == null;
+    }
+
     // ======================================================
-    // =================== RESTANTE IGUAL ===================
+    // =================== MONGO + DOTENV ===================
     // ======================================================
 
     private static void inicializarMongo() {
@@ -208,7 +258,7 @@ public class MainServer {
         System.out.println("Usuário salvo no MongoDB: " + doc.toJson());
     }
 
-    // ---------------------- EVENTOS ----------------------
+    // ---------------------- EVENTOS (já existiam) ----------------------
 
     private static String processarEvento(JsonObject root) {
         String tipo = root.get("tipo").getAsString();
@@ -236,7 +286,6 @@ public class MainServer {
     }
 
     private static void registrarDialogo(String idUsuario, JsonObject root) {
-        // Converte o conteúdo do diálogo em um objeto Dialogo
         String texto = root.has("texto") ? root.get("texto").getAsString() : "";
         String persona = root.has("persona") ? root.get("persona").getAsString() : "narrador";
         long timestamp = System.currentTimeMillis();
@@ -255,7 +304,6 @@ public class MainServer {
     }
 
     private static String registrarTentativa(String idUsuario, String idMissao, JsonObject root) {
-        // Constrói o model HistoricoMissao a partir do JsonObject
         HistoricoMissao hm = new HistoricoMissao();
         hm.setIdUsuario(idUsuario);
         hm.setIdMissao(idMissao);
@@ -265,7 +313,6 @@ public class MainServer {
         hm.setErro(erro);
         hm.setData(new Date());
 
-        // output (array)
         List<String> outputList = new ArrayList<>();
         if (root.has("output") && root.get("output").isJsonArray()) {
             JsonArray arr = root.getAsJsonArray("output");
@@ -278,7 +325,6 @@ public class MainServer {
         String resultado = validarMissao(idMissao, codigo, erro);
         hm.setResultado(resultado);
 
-        // Converte o model para Document manualmente (Opção A)
         Document tentativa = new Document("id_usuario", hm.getIdUsuario())
                 .append("id_missao", hm.getIdMissao())
                 .append("resultado", hm.getResultado())
