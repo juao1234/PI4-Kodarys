@@ -80,6 +80,7 @@ const MISSION_ALLOWED: Record<string, string> = {
   M05_FINAL: 'print(), input(), variáveis, int()/float()/str(), concatenação, operadores aritméticos simples',
 };
 const MISSION_ORDER = ['M01_INTRO', 'M02_VARIAVEIS', 'M03_INPUT', 'M04_OPERADORES', 'M05_FINAL'];
+const FINAL_JUMP_KEYWORD = '/irfinal';
 
 const MODEL_NAME = 'gemini-2.5-flash';
 type MissionStatus = 'incomplete' | 'awaiting_feedback' | 'complete';
@@ -218,6 +219,8 @@ export default function LabPage() {
   const [lastAttempt, setLastAttempt] = useState<LastAttempt | null>(null);
   const [currentMission, setCurrentMission] = useState<string>(DEFAULT_MISSION);
   const [moduleCompleted, setModuleCompleted] = useState(false);
+  const [pyodide, setPyodide] = useState<any>(null);
+  const [pyStatus, setPyStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -260,6 +263,37 @@ export default function LabPage() {
     if (!apiKey) return null;
     return new GoogleGenAI({ apiKey });
   }, [apiKey]);
+
+  useEffect(() => {
+    const ensurePyodide = async () => {
+      if (typeof window === 'undefined' || pyodide || pyStatus === 'loading') return;
+      setPyStatus('loading');
+      try {
+        if (!window.loadPyodide) {
+          await new Promise<void>((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Falha ao carregar Pyodide'));
+            document.body.appendChild(script);
+          });
+        }
+        const py = await window.loadPyodide?.({
+          stdin: () => '',
+        });
+        if (py) {
+          setPyodide(py);
+          setPyStatus('ready');
+        } else {
+          throw new Error('Pyodide não inicializado');
+        }
+      } catch (err) {
+        setPyStatus('error');
+        setExecutionError(err instanceof Error ? err.message : String(err));
+      }
+    };
+    void ensurePyodide();
+  }, [pyodide, pyStatus]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -338,157 +372,57 @@ export default function LabPage() {
     }
   };
 
-  const runCode = () => {
+  const runCode = async () => {
     setStage('practice');
-    const output: string[] = [];
-    const errors: string[] = [];
-    const vars: Record<string, string | number> = {};
-    const mockInputs = { text: 'Aprendiz', number: '17' };
+    if (!pyodide) {
+      setExecutionError(pyStatus === 'loading' ? 'Carregando engine Python...' : 'Engine Python indisponível.');
+      return;
+    }
 
-    const buildRunFeedback = (success: boolean, joinedOutput: string, firstError?: string) => {
-      const lowerOut = joinedOutput.toLowerCase();
-      const looksLikeGreeting =
-        lowerOut.includes('ola') || lowerOut.includes('olá') || lowerOut.includes('hello') || lowerOut.includes('sauda');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
 
-      if (!success) {
-        const text = `${PERSONAS.raxos.prefix}: Tsc... a magia quebrou${
-          firstError ? ` em "${firstError}"` : ''
-        }. Reescreva usando print() com aspas e reencontre o foco.`;
-        return { persona: 'raxos' as PersonaKey, text };
-      }
-
-      if (looksLikeGreeting) {
-        const text = `${PERSONAS.sygnus.prefix}: A porta reagiu à saudação "${joinedOutput}". Próximo passo: personalize a frase (inclua seu nome ou um título) e veja como ecoa.`;
-        return { persona: 'sygnus' as PersonaKey, text };
-      }
-
-      const text = `${PERSONAS.lyra.prefix}: Rodou sem erro, mas a runa quer uma saudação clara. Tenta um "Olá, Dungeon!" e me mostra de novo?`;
-      return { persona: 'lyra' as PersonaKey, text };
-    };
-
-    const lines = code.split(/\r?\n/);
-    lines.forEach((raw, idx) => {
-      const line = raw.trim();
-      if (!line || line.startsWith('#')) return;
-
-      const printMatch = line.match(/^print\s*\((.*)\)\s*$/);
-      const assignMatch = line.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/);
-
-      if (assignMatch) {
-        const [, name, valueRaw] = assignMatch;
-        const strMatch = valueRaw.match(/^["'](.+)["']$/);
-        const inputMatch =
-          valueRaw.match(/^(?:int|float|str)?\s*\(\s*input\((.*)\)\s*\)$/) || // int(input())
-          valueRaw.match(/^input\((.*)\)$/); // input()
-
-        if (strMatch) {
-          vars[name] = strMatch[1];
-        } else if (inputMatch) {
-          const wrapper = valueRaw.startsWith('int(') ? 'int' : valueRaw.startsWith('float(') ? 'float' : valueRaw.startsWith('str(') ? 'str' : null;
-          const base = wrapper ? valueRaw.replace(/^(int|float|str)\s*\(\s*input\((.*)\)\s*\)$/, 'input($2)') : valueRaw;
-          if (/input\(/.test(base)) {
-            if (wrapper === 'int' || wrapper === 'float') vars[name] = Number(mockInputs.number);
-            else if (wrapper === 'str') vars[name] = String(mockInputs.text);
-            else vars[name] = mockInputs.text;
-          }
-        } else if (!Number.isNaN(Number(valueRaw))) {
-          vars[name] = Number(valueRaw);
-        } else if (valueRaw in vars) {
-          vars[name] = vars[valueRaw];
-        } else {
-          errors.push(`Linha ${idx + 1}: valor inválido em "${line}"`);
-        }
-        return;
-      }
-
-      if (printMatch) {
-        const inside = printMatch[1].trim();
-        const strMatch = inside.match(/^["'](.*)["']$/);
-        const fStringMatch = inside.match(/^f["'](.*)["']$/);
-        const inputInline = inside.match(/^input\((.*)\)$/);
-        if (strMatch) {
-          output.push(strMatch[1]);
-          return;
-        }
-        if (fStringMatch) {
-          let text = fStringMatch[1];
-          text = text.replace(/\{([^}]+)\}/g, (_, varName) => {
-            const key = varName.trim();
-            if (key in vars) return String(vars[key]);
-            if (!Number.isNaN(Number(key))) return String(Number(key));
-            return `{${key}}`;
-          });
-          output.push(text);
-          return;
-        }
-        if (inputInline) {
-          output.push(mockInputs.text);
-          return;
-        }
-        if (inside in vars) {
-          output.push(String(vars[inside]));
-          return;
-        }
-
-        // suporte simples a concatenação com +
-        const concatParts = inside.split('+').map((p) => p.trim()).filter(Boolean);
-        if (concatParts.length > 1) {
-          const resolved = concatParts.map((part) => {
-            const str = part.match(/^["'](.*)["']$/);
-            if (str) return str[1];
-            if (part in vars) return String(vars[part]);
-            if (!Number.isNaN(Number(part))) return String(Number(part));
-            if (/^input\(/.test(part)) return mockInputs.text;
-            return undefined;
-          });
-          if (resolved.every((r) => r !== undefined)) {
-            output.push(resolved.join(''));
-            return;
-          }
-        }
-
-        errors.push(`Linha ${idx + 1}: print não reconheceu "${inside}"`);
-        return;
-      }
-
-      errors.push(`Linha ${idx + 1}: comando não suportado "${line}"`);
+    pyodide.setStdout?.({
+      batched: (data: string) => stdout.push(data),
+    });
+    pyodide.setStderr?.({
+      batched: (data: string) => stderr.push(data),
     });
 
-    if (!output.length && !errors.length) {
-      output.push('(sem saída)');
+    // define input que usa prompt para testes rápidos
+    pyodide.globals.set('__pyodide_input', (msg?: string) => {
+      const val = window.prompt(msg ?? 'Digite um valor:');
+      return val ?? '';
+    });
+    await pyodide.runPythonAsync(`import builtins\nbuiltins.input = __pyodide_input`);
+
+    try {
+      await pyodide.runPythonAsync(code);
+    } catch (err) {
+      stderr.push(err instanceof Error ? err.message : String(err));
     }
 
-    const isFinalChallenge = currentMission === 'M05_FINAL';
-    if (isFinalChallenge) {
-      const hasInput = /input\(/i.test(code);
-      const hasAgeVar = /idade/i.test(code);
-      const hasPlusFive = /\+ *5/.test(code);
-      const hasPrint = /print\s*\(/i.test(code);
-      const meets = hasInput && hasAgeVar && hasPlusFive && hasPrint;
-      if (meets) {
-        errors.length = 0;
-        setExecutionError(null);
-        if (!output.length) output.push('Saudação simulada (modo treino).');
-      }
-    }
+    const output = stdout.length ? stdout.map((line) => line.trimEnd()) : [];
+    const errorText = stderr.join('\n').trim() || null;
 
     setTerminalOutput(output);
-    setExecutionError(errors.length ? errors.join('\n') : null);
-    setLastAttempt({ code, output, error: errors.length ? errors.join('\n') : null });
-    void persistTentativa(code, output, errors.length ? errors.join('\n') : undefined);
+    setExecutionError(errorText);
+    setLastAttempt({ code, output, error: errorText });
+    void persistTentativa(code, output, errorText ?? undefined);
 
     const hasVisibleOutput = output.some((line) => line.trim().length > 0);
-    const success = errors.length === 0 && hasVisibleOutput;
+    const success = !errorText && hasVisibleOutput;
     setMissionStatus(success ? 'awaiting_feedback' : 'incomplete');
     const joinedOutput = output.join(' | ').trim();
-    const runFeedback = buildRunFeedback(success, joinedOutput, errors[0]);
+    const runFeedback = success
+      ? { persona: 'sygnus' as PersonaKey, text: `${PERSONAS.sygnus.prefix}: Boa execução. A runa respondeu ao seu comando.` }
+      : { persona: 'raxos' as PersonaKey, text: `${PERSONAS.raxos.prefix}: Magia falhou: ${errorText ?? 'erro desconhecido'}. Tente novamente.` };
 
-    // Envia feedback via LLM, usando o último persona calculado para o sistema; se quiser fixar no professor, passe 'sygnus'.
     const missionObjective = MISSION_OBJECTIVES[currentMission] ?? MISSION_OBJECTIVES[DEFAULT_MISSION];
     const autoPrompt = `Avalie a execução automática: ${success ? 'sucesso' : 'falha'}.
 Conceito foco: ${missionObjective}
 Saída: ${joinedOutput || '(sem saída)'}
-Erro: ${errors[0] ?? 'nenhum'}
+Erro: ${errorText ?? 'nenhum'}
 Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o próximo passo como uma pequena cena ou obstáculo resolvido. Tom de ${runFeedback.persona}.`;
     void sendPrompt(autoPrompt, runFeedback.persona, true);
   };
@@ -541,7 +475,7 @@ Contexto adicional: Módulo 1 de Python (interpretador, print, strings, variáve
 Você é ${PERSONAS[persona].label}. ${PERSONAS[persona].accent}
 Etapa atual: ${stage === 'story' ? 'história/explicação' : 'prática/feedback do desafio'}.
 Objetivo atual: ${missionObjective}
-Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allowedConcepts}. NÃO introduza conceitos fora dessa lista (ex.: não ensinar novas sintaxes além do escopo). Metodologia obrigatória: (1) Sygnus explica o conceito atual com exemplo certo/errado + mini desafio; (2) aluno pratica; (3) professor dá feedback curto e faz 1 pergunta simples; (4) NPC (Lyra ou Raxos) traz código bugado para o aluno corrigir; (5) conclua e convide a seguir para a próxima missão. Não repita passos já concluídos, não fique preso em loop. Seja didático e direto (2–4 frases), traga 1 dica prática e 1 mini desafio curto. Menos narrativa, mais explicação de código e próximos passos. Não cite códigos de missão (M01, M02…). Ao avançar, descreva o progresso como uma pequena cena/obstáculo superado e explique o conceito seguinte em tom diegético.${onboarding}`;
+Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allowedConcepts}. NÃO introduza conceitos fora dessa lista (ex.: não ensinar novas sintaxes além do escopo). Estrutura obrigatória de avanço: (1) descreva a exploração e apresente um desafio da dungeon; (2) Sygnus ensina o conceito necessário (exemplo certo/errado + mini desafio mental) para vencer o obstáculo; (3) após a tentativa do aprendiz, reaja e mostre a consequência na dungeon (pequena cena com os personagens); (4) a equipe descobre o próximo desafio e o ciclo recomeça. Não cite códigos de missão (M01, M02…). Não repita passos já concluídos, não fique preso em loop. Seja didático e direto (2–4 frases), traga 1 dica prática e 1 mini desafio curto. Use a narrativa apenas para marcar progresso e manter a motivação.${onboarding}`;
 
     const userPrompt =
       prompt +
@@ -603,6 +537,22 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
   const sendMessage = async () => {
     if (!chatInput.trim()) return;
     const prompt = chatInput.trim();
+    if (prompt === FINAL_JUMP_KEYWORD) {
+      setChatInput('');
+      setModuleCompleted(false);
+      setCurrentMission('M05_FINAL');
+      setMissionStatus('incomplete');
+      setStage('story');
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'model',
+          persona: 'sygnus',
+          text: `${PERSONAS.sygnus.prefix}: Atalho de teste ativado. Você foi levado ao desafio final da dungeon. Prepare uma saudação com nome e idade, some +5 na idade e mostre com print().`,
+        },
+      ]);
+      return;
+    }
     setChatInput('');
     await sendPrompt(prompt);
   };
@@ -773,4 +723,9 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
       </main>
     </div>
   );
+}
+declare global {
+  interface Window {
+    loadPyodide?: any;
+  }
 }
