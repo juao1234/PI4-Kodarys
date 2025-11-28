@@ -377,7 +377,9 @@ export default function LabPage() {
       if (assignMatch) {
         const [, name, valueRaw] = assignMatch;
         const strMatch = valueRaw.match(/^["'](.+)["']$/);
-        const inputMatch = valueRaw.match(/^(?:int|float|str)?\s*\(\s*input\((.*)\)\s*\)$/);
+        const inputMatch =
+          valueRaw.match(/^(?:int|float|str)?\s*\(\s*input\((.*)\)\s*\)$/) || // int(input())
+          valueRaw.match(/^input\((.*)\)$/); // input()
 
         if (strMatch) {
           vars[name] = strMatch[1];
@@ -402,9 +404,21 @@ export default function LabPage() {
       if (printMatch) {
         const inside = printMatch[1].trim();
         const strMatch = inside.match(/^["'](.*)["']$/);
+        const fStringMatch = inside.match(/^f["'](.*)["']$/);
         const inputInline = inside.match(/^input\((.*)\)$/);
         if (strMatch) {
           output.push(strMatch[1]);
+          return;
+        }
+        if (fStringMatch) {
+          let text = fStringMatch[1];
+          text = text.replace(/\{([^}]+)\}/g, (_, varName) => {
+            const key = varName.trim();
+            if (key in vars) return String(vars[key]);
+            if (!Number.isNaN(Number(key))) return String(Number(key));
+            return `{${key}}`;
+          });
+          output.push(text);
           return;
         }
         if (inputInline) {
@@ -415,6 +429,24 @@ export default function LabPage() {
           output.push(String(vars[inside]));
           return;
         }
+
+        // suporte simples a concatenação com +
+        const concatParts = inside.split('+').map((p) => p.trim()).filter(Boolean);
+        if (concatParts.length > 1) {
+          const resolved = concatParts.map((part) => {
+            const str = part.match(/^["'](.*)["']$/);
+            if (str) return str[1];
+            if (part in vars) return String(vars[part]);
+            if (!Number.isNaN(Number(part))) return String(Number(part));
+            if (/^input\(/.test(part)) return mockInputs.text;
+            return undefined;
+          });
+          if (resolved.every((r) => r !== undefined)) {
+            output.push(resolved.join(''));
+            return;
+          }
+        }
+
         errors.push(`Linha ${idx + 1}: print não reconheceu "${inside}"`);
         return;
       }
@@ -454,11 +486,10 @@ export default function LabPage() {
     // Envia feedback via LLM, usando o último persona calculado para o sistema; se quiser fixar no professor, passe 'sygnus'.
     const missionObjective = MISSION_OBJECTIVES[currentMission] ?? MISSION_OBJECTIVES[DEFAULT_MISSION];
     const autoPrompt = `Avalie a execução automática: ${success ? 'sucesso' : 'falha'}.
-Missão: ${currentMission}
+Conceito foco: ${missionObjective}
 Saída: ${joinedOutput || '(sem saída)'}
 Erro: ${errors[0] ?? 'nenhum'}
-Objetivo: ${missionObjective}
-Dê feedback curto e pedagógico em tom de ${runFeedback.persona}.`;
+Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o próximo passo como uma pequena cena ou obstáculo resolvido. Tom de ${runFeedback.persona}.`;
     void sendPrompt(autoPrompt, runFeedback.persona, true);
   };
 
@@ -510,7 +541,7 @@ Contexto adicional: Módulo 1 de Python (interpretador, print, strings, variáve
 Você é ${PERSONAS[persona].label}. ${PERSONAS[persona].accent}
 Etapa atual: ${stage === 'story' ? 'história/explicação' : 'prática/feedback do desafio'}.
 Objetivo atual: ${missionObjective}
-Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allowedConcepts}. NÃO introduza conceitos fora dessa lista (ex.: não ensinar novas sintaxes além do escopo). Metodologia obrigatória: (1) Sygnus explica o conceito atual com exemplo certo/errado + mini desafio; (2) aluno pratica; (3) professor dá feedback curto e faz 1 pergunta simples; (4) NPC (Lyra ou Raxos) traz código bugado para o aluno corrigir; (5) conclua e convide a seguir para a próxima missão. Não repita passos já concluídos, não fique preso em loop. Seja didático e direto (2–4 frases), traga 1 dica prática e 1 mini desafio curto. Menos narrativa, mais explicação de código e próximos passos.${onboarding}`;
+Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allowedConcepts}. NÃO introduza conceitos fora dessa lista (ex.: não ensinar novas sintaxes além do escopo). Metodologia obrigatória: (1) Sygnus explica o conceito atual com exemplo certo/errado + mini desafio; (2) aluno pratica; (3) professor dá feedback curto e faz 1 pergunta simples; (4) NPC (Lyra ou Raxos) traz código bugado para o aluno corrigir; (5) conclua e convide a seguir para a próxima missão. Não repita passos já concluídos, não fique preso em loop. Seja didático e direto (2–4 frases), traga 1 dica prática e 1 mini desafio curto. Menos narrativa, mais explicação de código e próximos passos. Não cite códigos de missão (M01, M02…). Ao avançar, descreva o progresso como uma pequena cena/obstáculo superado e explique o conceito seguinte em tom diegético.${onboarding}`;
 
     const userPrompt =
       prompt +
@@ -536,16 +567,10 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
       });
 
       let assembled = '';
-      let prefixAdded = false;
 
       for await (const chunk of stream) {
         const text = chunk.text ?? '';
-        if (!prefixAdded) {
-          assembled = `${PERSONAS[persona].prefix}: ${text}`;
-          prefixAdded = true;
-        } else {
-          assembled += text;
-        }
+        assembled += text;
 
         setChatMessages((prev) => {
           const updated = [...prev];
