@@ -461,8 +461,6 @@ public class MainServer {
                 socket.close();
             } catch (IOException ignored) {}
         }
-
-        System.out.println("Conexão encerrada.\n");
     }
 
 }
