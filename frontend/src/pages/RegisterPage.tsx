@@ -13,7 +13,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 👇 estados dos campos
+  // estados dos campos
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [idade, setIdade] = useState("");
@@ -23,7 +23,7 @@ export default function RegisterPage() {
   const { signIn } = useAuth(); // por enquanto não uso aqui, só no login
   const navigate = useNavigate();
 
-  // 🔵 Função chamada ao clicar em "Cadastrar"
+  // Função chamada ao clicar em "Cadastrar"
   async function handleRegister() {
     // validações simples no front
     if (!idade || Number(idade) < 1) {
