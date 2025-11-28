@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { Send, Code2, HelpCircle, Sparkles, Menu, Play, Terminal, X } from 'lucide-react';
+import { Send, Code2, Sparkles, Menu, Play, Terminal, X } from 'lucide-react';
 
 type ChatMessage = {
   role: 'user' | 'model';
@@ -12,12 +12,6 @@ type ChatMessage = {
 type PersonaKey = 'sygnus' | 'lyra' | 'raxos' | 'narrador';
 type Stage = 'story' | 'practice';
 type LastAttempt = { code: string; output: string[]; error: string | null };
-type ProgressState = {
-  ultimaMissao?: string;
-  ultimaTentativaMissao?: string;
-  ultimaTentativaResultado?: string;
-  pontoHistoria?: string;
-};
 
 interface PersonaConfig {
   label: string;
@@ -76,13 +70,16 @@ const MISSION_OBJECTIVES: Record<string, string> = {
   M02_VARIAVEIS: 'Criar variáveis bem nomeadas e imprimir seus valores.',
   M03_INPUT: 'Ler input, converter para número e imprimir o resultado.',
   M04_OPERADORES: 'Usar operadores aritméticos/concatenação e mostrar o resultado com print().',
+  M05_FINAL: 'Desafio final: ler nome e idade, converter idade para número, somar +5 e imprimir uma saudação personalizada com o novo valor.',
 };
 const MISSION_ALLOWED: Record<string, string> = {
   M01_INTRO: 'interpretador, print(), strings, aspas, variáveis simples',
   M02_VARIAVEIS: 'variáveis, tipos básicos (int, float, str), nomeação',
   M03_INPUT: 'input(), conversão int()/float()/str(), diferenças str vs número',
   M04_OPERADORES: 'operadores aritméticos (+ - * /), concatenação, conversão de tipos',
+  M05_FINAL: 'print(), input(), variáveis, int()/float()/str(), concatenação, operadores aritméticos simples',
 };
+const MISSION_ORDER = ['M01_INTRO', 'M02_VARIAVEIS', 'M03_INPUT', 'M04_OPERADORES', 'M05_FINAL'];
 
 const MODEL_NAME = 'gemini-2.5-flash';
 type MissionStatus = 'incomplete' | 'awaiting_feedback' | 'complete';
@@ -211,7 +208,7 @@ const pickAutoPersona = (stage: Stage, last?: PersonaKey): PersonaKey => {
 };
 
 export default function LabPage() {
-  const [userId, setUserId] = useState<string>(() => {
+  const [userId] = useState<string>(() => {
     if (typeof window === 'undefined') return 'demo-user';
     return localStorage.getItem('kodarys_user') ?? 'demo-user';
   });
@@ -219,8 +216,8 @@ export default function LabPage() {
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [lastAttempt, setLastAttempt] = useState<LastAttempt | null>(null);
-  const [progress, setProgress] = useState<ProgressState>({});
   const [currentMission, setCurrentMission] = useState<string>(DEFAULT_MISSION);
+  const [moduleCompleted, setModuleCompleted] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -273,26 +270,12 @@ export default function LabPage() {
     }
   }, [chatMessages, stage]);
 
-  const updateUserId = (value: string) => {
-    const normalized = value.trim() || 'demo-user';
-    setUserId(normalized);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('kodarys_user', normalized);
-    }
-  };
-
   useEffect(() => {
     const fetchProgress = async () => {
       try {
         const res = await fetch(`http://localhost:8080/api/progresso?id_usuario=${encodeURIComponent(userId)}`);
         if (!res.ok) return;
         const data = await res.json();
-        setProgress({
-          ultimaMissao: data.ultima_missao,
-          ultimaTentativaMissao: data.ultima_tentativa_missao,
-          ultimaTentativaResultado: data.ultima_tentativa_resultado,
-          pontoHistoria: data.ponto_historia_atual,
-        });
         if (data.missao_atual) {
           setCurrentMission(data.missao_atual);
         } else if (data.ultima_missao) {
@@ -348,13 +331,7 @@ export default function LabPage() {
         }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setProgress((prev) => ({
-          ...prev,
-          ultimaTentativaMissao: currentMission,
-          ultimaTentativaResultado: data.resultado ?? prev.ultimaTentativaResultado,
-          ultimaMissao: data.resultado === 'SUCESSO' ? currentMission : prev.ultimaMissao,
-        }));
+        void res.json();
       }
     } catch {
       // silencia em dev
@@ -366,6 +343,7 @@ export default function LabPage() {
     const output: string[] = [];
     const errors: string[] = [];
     const vars: Record<string, string | number> = {};
+    const mockInputs = { text: 'Aprendiz', number: '17' };
 
     const buildRunFeedback = (success: boolean, joinedOutput: string, firstError?: string) => {
       const lowerOut = joinedOutput.toLowerCase();
@@ -399,8 +377,18 @@ export default function LabPage() {
       if (assignMatch) {
         const [, name, valueRaw] = assignMatch;
         const strMatch = valueRaw.match(/^["'](.+)["']$/);
+        const inputMatch = valueRaw.match(/^(?:int|float|str)?\s*\(\s*input\((.*)\)\s*\)$/);
+
         if (strMatch) {
           vars[name] = strMatch[1];
+        } else if (inputMatch) {
+          const wrapper = valueRaw.startsWith('int(') ? 'int' : valueRaw.startsWith('float(') ? 'float' : valueRaw.startsWith('str(') ? 'str' : null;
+          const base = wrapper ? valueRaw.replace(/^(int|float|str)\s*\(\s*input\((.*)\)\s*\)$/, 'input($2)') : valueRaw;
+          if (/input\(/.test(base)) {
+            if (wrapper === 'int' || wrapper === 'float') vars[name] = Number(mockInputs.number);
+            else if (wrapper === 'str') vars[name] = String(mockInputs.text);
+            else vars[name] = mockInputs.text;
+          }
         } else if (!Number.isNaN(Number(valueRaw))) {
           vars[name] = Number(valueRaw);
         } else if (valueRaw in vars) {
@@ -414,8 +402,13 @@ export default function LabPage() {
       if (printMatch) {
         const inside = printMatch[1].trim();
         const strMatch = inside.match(/^["'](.*)["']$/);
+        const inputInline = inside.match(/^input\((.*)\)$/);
         if (strMatch) {
           output.push(strMatch[1]);
+          return;
+        }
+        if (inputInline) {
+          output.push(mockInputs.text);
           return;
         }
         if (inside in vars) {
@@ -431,6 +424,20 @@ export default function LabPage() {
 
     if (!output.length && !errors.length) {
       output.push('(sem saída)');
+    }
+
+    const isFinalChallenge = currentMission === 'M05_FINAL';
+    if (isFinalChallenge) {
+      const hasInput = /input\(/i.test(code);
+      const hasAgeVar = /idade/i.test(code);
+      const hasPlusFive = /\+ *5/.test(code);
+      const hasPrint = /print\s*\(/i.test(code);
+      const meets = hasInput && hasAgeVar && hasPlusFive && hasPrint;
+      if (meets) {
+        errors.length = 0;
+        setExecutionError(null);
+        if (!output.length) output.push('Saudação simulada (modo treino).');
+      }
     }
 
     setTerminalOutput(output);
@@ -550,6 +557,7 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
       void persistDialog(assembled, persona);
       if (missionStatus === 'awaiting_feedback') {
         setMissionStatus('complete');
+        handleMissionCompletion(currentMission);
       }
     } catch (err) {
       setChatMessages((prev) => {
@@ -574,6 +582,35 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
     await sendPrompt(prompt);
   };
 
+  const getNextMission = (mission: string) => {
+    const idx = MISSION_ORDER.indexOf(mission);
+    if (idx === -1) return null;
+    return MISSION_ORDER[idx + 1] ?? null;
+  };
+
+  const handleMissionCompletion = (mission: string) => {
+    const next = getNextMission(mission);
+    if (!next) {
+      setModuleCompleted(true);
+      const congrats = `${PERSONAS.sygnus.prefix}: Parabéns! Você concluiu o Módulo. Sua saudação final ecoou por toda Kodarys.`;
+      setChatMessages((prev) => [...prev, { role: 'model', persona: 'sygnus', text: congrats }]);
+      return;
+    }
+    setTimeout(() => {
+      setCurrentMission(next);
+      setMissionStatus('incomplete');
+      setStage('story');
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'model',
+          persona: 'sygnus',
+          text: `${PERSONAS.sygnus.prefix}: Excelente! Avancemos para ${next}. Teste o que aprendeu e me mostre sua próxima execução.`,
+        },
+      ]);
+    }, 300);
+  };
+
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden font-sans selection:bg-purple-500/30">
       <div
@@ -591,6 +628,14 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
 
       <main className="relative z-20 w-full h-full flex flex-col items-center justify-center px-4 py-6">
         <div className="w-full max-w-7xl flex flex-col gap-4 h-full">
+          {moduleCompleted && (
+            <div className="w-full flex justify-center">
+              <div className="px-4 py-2 rounded-full bg-green-600/80 text-white text-sm font-semibold shadow-lg shadow-green-900/30 border border-green-400/50">
+                Parabéns você concluiu o Módulo!
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-5 flex-1 min-h-[80vh]">
             <div className="bg-[#0b1021]/85 border border-white/10 rounded-2xl p-4 flex flex-col overflow-hidden shadow-2xl shadow-black/50">
               <div
