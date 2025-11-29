@@ -37,7 +37,7 @@ export function HeroContent() {
           />
           <a
             href="/lab"
-            className="border border-amber-300/70 text-amber-200 font-semibold px-5 py-3 rounded-3xl hover:bg-amber-300 hover:text-black transition-all"
+            className="bg-amber-300 text-black font-bold !py-3 !px-5 !rounded-3xl transition-all hover:!text-white hover:!bg-amber-400 hover:shadow-lg hover:shadow-amber-500"
           >
             Abrir Lab IA
           </a>

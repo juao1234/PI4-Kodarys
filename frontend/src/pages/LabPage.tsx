@@ -26,7 +26,7 @@ const MODEL_NAME = 'gemini-2.5-flash';
 
 const NavbarLocal: React.FC = () => {
   return (
-    <nav className="absolute top-0 left-0 w-full z-50 px-6 py-4 flex justify-between items-center pointer-events-none">
+    <nav className="absolute top-0 left-0 w-full z-50 !px-6 !py-4 flex justify-between items-center pointer-events-none">
       <div className="flex items-center gap-2 pointer-events-auto cursor-pointer group">
         <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm border border-white/10 group-hover:bg-purple-500/20 transition-colors">
           <Sparkles className="w-5 h-5 text-purple-300" />
@@ -65,7 +65,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   return (
     <div className="w-full h-full flex flex-col gap-4">
       <div className="flex-1 bg-[#0f172a]/90 rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden relative backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 py-3 bg-white/10 border-b border-white/5">
+        <div className="flex items-center justify-between !px-4 !py-3 bg-white/10 border-b border-white/5">
           <div className="flex items-center gap-2">
             <div className="flex gap-1.5">
               <div className="w-3 h-3 rounded-full bg-red-500/50" />
@@ -77,7 +77,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           <div className="flex gap-2">
             <button
               onClick={runCode}
-              className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-md transition-all shadow-lg shadow-purple-900/20"
+              className="flex items-center gap-2 !px-3 !py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-md transition-all shadow-lg shadow-purple-900/20"
             >
               <Play className="w-3 h-3 fill-current" /> Run Code
             </button>
@@ -496,11 +496,11 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
 
       <NavbarLocal />
 
-      <main className="relative z-20 w-full h-full flex flex-col items-center justify-center px-4 py-6">
+      <main className="relative z-20 w-full h-full flex flex-col items-center justify-center !px-4 !py-6">
         <div className="w-full max-w-7xl flex flex-col gap-4 h-full">
           {moduleCompleted && (
             <div className="w-full flex justify-center">
-              <div className="px-4 py-2 rounded-full bg-green-600/80 text-white text-sm font-semibold shadow-lg shadow-green-900/30 border border-green-400/50">
+              <div className="!px-4 !py-2 rounded-full bg-green-600/80 text-white text-sm font-semibold shadow-lg shadow-green-900/30 border border-green-400/50">
                 Parabéns você concluiu o Módulo!
               </div>
             </div>
@@ -529,7 +529,7 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
 
                   return (
                     <div key={idx} className="group animate-fade-in-up w-full flex justify-center">
-                      <div className="w-full max-w-3xl flex flex-col gap-1 py-1 px-4 rounded-lg hover:bg-white/5 transition-colors duration-300">
+                      <div className="w-full max-w-3xl flex flex-col gap-1 !py-1 !px-4 rounded-lg hover:bg-white/5 transition-colors duration-300">
                         <span className={`text-sm font-bold font-mono uppercase tracking-wider ${nameColor}`}>
                           {msg.role === 'user' ? 'Aprendiz' : name}
                         </span>
@@ -543,7 +543,7 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
                                 setCode(snippet);
                                 setStage('practice');
                               }}
-                              className="text-xs px-2 py-1 rounded bg-purple-700/60 text-white border border-purple-500/50 hover:bg-purple-600 transition-colors"
+                              className="text-xs !px-2 !py-1 rounded bg-purple-700/60 text-white border border-purple-500/50 hover:bg-purple-600 transition-colors"
                             >
                               Enviar código para IDE
                             </button>
@@ -554,7 +554,7 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
                   );
                 })}
                 {isStreaming && (
-                  <div className="flex items-center gap-2 px-2 opacity-50">
+                  <div className="flex items-center gap-2 !px-2 opacity-50">
                     <span className="text-purple-400 font-mono text-xs uppercase animate-pulse">Recebendo sinal...</span>
                   </div>
                 )}
@@ -572,7 +572,7 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
                     }
                   }}
                   placeholder={isStreaming ? 'O éter está ocupado...' : 'Fale seu destino... (Shift+Enter para nova linha)'}
-                  className="flex-1 bg-transparent border-none text-white placeholder-slate-500 focus:ring-0 resize-none min-h-[50px] max-h-[120px] py-3 px-4 text-base"
+                  className="flex-1 bg-transparent border-none text-white placeholder-slate-500 focus:ring-0 resize-none min-h-[50px] max-h-[120px] !py-3 !px-4 text-base"
                   disabled={isStreaming}
                   rows={1}
                 />
@@ -593,7 +593,7 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
 
             </div>
 
-            <div className="bg-[#0b1021]/85 border border-white/10 rounded-2xl p-4 backdrop-blur-lg shadow-2xl shadow-black/50 min-h-[60vh] flex flex-col gap-3">
+            <div className="bg-[#0b1021]/85 border border-white/10 rounded-2xl p-4 backdrop-blur-lg shadow-2xl shadow-black/50 min-h-[60vh] flex flex-col gap-3 !p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-slate-200 font-semibold">
                   <Code2 className="w-4 h-4 text-purple-300" />
