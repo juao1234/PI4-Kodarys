@@ -459,4 +459,53 @@ public class MainServer {
 
         return resp.toString();
     }
+
+    private void handleClient(Socket socket) {
+        try (
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
+        ) {
+            String json = in.readLine();
+            System.out.println("Recebido: " + json);
+
+            Gson gson = new Gson();
+
+            try {
+                JsonObject root = gson.fromJson(json, JsonObject.class);
+                if (root != null && root.has("tipo")) {
+                    String response = processarEvento(root);
+                    out.println(response);
+                } else {
+                    Usuario usuario = gson.fromJson(json, Usuario.class);
+
+                    if (usuario != null &&
+                            usuario.getNome() != null &&
+                            usuario.getEmail() != null) {
+
+                        if (usuariosCollection != null) {
+                            String senhaHash = BCrypt.hashpw(usuario.getSenha(), BCrypt.gensalt());
+                            salvarNoMongo(usuario, senhaHash);
+                            out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido e salvo no MongoDB.\"}");
+                        } else {
+                            out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido (modo teste - não persistido).\"}");
+                        }
+                    } else {
+                        out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes.\"}");
+                    }
+                }
+            } catch (JsonSyntaxException e) {
+                out.println("{\"status\": \"erro\", \"mensagem\": \"JSON inválido.\"}");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException ignored) {}
+        }
+
+        System.out.println("Conexão encerrada.\n");
+    }
+
 }
