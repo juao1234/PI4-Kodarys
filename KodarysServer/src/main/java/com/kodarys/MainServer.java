@@ -6,6 +6,12 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 import org.bson.Document;
 
@@ -14,14 +20,19 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.kodarys.model.Dialogo;
+import com.kodarys.model.HistoricoMissao;
 import com.kodarys.model.Usuario;
+import com.mongodb.MongoException;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.Filters;
 
 import io.github.cdimascio.dotenv.Dotenv;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class MainServer {
 
@@ -29,72 +40,168 @@ public class MainServer {
     private static MongoCollection<Document> usuariosCollection;
     private static MongoCollection<Document> historicoMissoesCollection;
     private static MongoCollection<Document> estadoNarrativaCollection;
-    private static final String[] MISSION_SEQUENCE = new String[] { "M01_INTRO", "M02_VARIAVEIS", "M03_INPUT", "M04_OPERADORES" };
+    private static final String[] MISSION_SEQUENCE = new String[] {
+            "M01_INTRO", "M02_VARIAVEIS", "M03_INPUT", "M04_OPERADORES"
+    };
 
-    public static void main(String[] args) {
-        int port = 5000;
-        Gson gson = new Gson();
+    // ======= CAMPOS PARA START/STOP DO SERVIDOR =========
+    private ServerSocket serverSocket;
+    private boolean running = false;
+    private int port;
 
-        // 🔵 Inicializa MongoDB usando .env
+    public MainServer(int port) {
+        this.port = port;
+    }
+
+    // ======================================================
+    // ================== MÉTODO START ======================
+    // ======================================================
+    public void start() throws IOException {
         inicializarMongo();
 
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Servidor TCP rodando na porta " + port + "...");
+        serverSocket = new ServerSocket(port);
+        running = true;
 
-            while (true) {
-                try (Socket socket = serverSocket.accept()) {
-                    System.out.println("Cliente conectado: " + socket.getInetAddress());
+        System.out.println("Servidor TCP rodando na porta " + port + "...");
 
-                    BufferedReader in = new BufferedReader(
-                            new InputStreamReader(socket.getInputStream()));
-                    PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+        Gson gson = new Gson();
 
-                    String json = in.readLine();
-                    System.out.println("Recebido: " + json);
+        while (running) {
+            try (Socket socket = serverSocket.accept()) {
+                System.out.println("Cliente conectado: " + socket.getInetAddress());
 
-                    try {
-                        JsonObject root = gson.fromJson(json, JsonObject.class);
+                BufferedReader in = new BufferedReader(
+                        new InputStreamReader(socket.getInputStream()));
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
-                        if (root != null && root.has("tipo")) {
-                            String response = processarEvento(root);
-                            out.println(response);
-                        } else {
-                            Usuario usuario = gson.fromJson(json, Usuario.class);
+                String json = in.readLine();
+                System.out.println("Recebido: " + json);
 
-                            if (usuario != null &&
-                                    usuario.getNome() != null &&
-                                    usuario.getEmail() != null) {
+                try {
+                    JsonObject root = gson.fromJson(json, JsonObject.class);
 
-                                salvarNoMongo(usuario);
+                    // ---------- EVENTOS (tem campo "tipo") ----------
+                    if (root != null && root.has("tipo")) {
+                        String response = processarEvento(root);
+                        out.println(response);
+                    } else {
+                        // ---------- CADASTRO ou LOGIN ----------
+                        Usuario usuario = gson.fromJson(json, Usuario.class);
 
-                                out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido e salvo no MongoDB.\"}");
-                                System.out.println("Usuário válido: " + usuario);
-                            } else {
-                                out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes.\"}");
-                                System.out.println("Usuário inválido (campos obrigatórios ausentes).");
+                        if (isCadastro(usuario)) {
+                            // CADASTRO
+                            try {
+                                String senhaHash = BCrypt.hashpw(usuario.getSenha(), BCrypt.gensalt());
+                                salvarNoMongo(usuario, senhaHash);
+
+                                out.println("{\"status\": \"ok\", \"mensagem\": \"Usuário cadastrado e salvo no MongoDB.\"}");
+                                System.out.println("Cadastro OK: " + usuario);
+                            } catch (MongoException me) {
+                                me.printStackTrace();
+                                out.println("{\"status\": \"erro\", \"mensagem\": \"Erro ao salvar no banco de dados.\"}");
+                                System.out.println("Erro ao salvar no MongoDB: " + me.getMessage());
                             }
-                        }
-                    } catch (JsonSyntaxException e) {
-                        out.println("{\"status\": \"erro\", \"mensagem\": \"JSON inválido.\"}");
-                        System.out.println("Erro de sintaxe no JSON: " + e.getMessage());
-                    }
 
-                    System.out.println("Deu tudo certo.\n");
+                        } else if (isLogin(usuario)) {
+                            // LOGIN
+                            try {
+                                Document doc = usuariosCollection
+                                        .find(Filters.eq("email", usuario.getEmail()))
+                                        .first();
+
+                                if (doc == null) {
+                                    out.println("{\"status\":\"erro\",\"mensagem\":\"Usuário não encontrado.\"}");
+                                    System.out.println("Login falhou: usuário não encontrado (" + usuario.getEmail() + ")");
+                                } else {
+                                    String senhaHash = doc.getString("senhaHash");
+
+                                    if (senhaHash == null) {
+                                        out.println("{\"status\":\"erro\",\"mensagem\":\"Usuário sem senha cadastrada.\"}");
+                                        System.out.println("Login falhou: usuário sem senha hash (" + usuario.getEmail() + ")");
+                                    } else if (BCrypt.checkpw(usuario.getSenha(), senhaHash)) {
+                                        out.println("{\"status\":\"ok\",\"mensagem\":\"Login realizado com sucesso.\"}");
+                                        System.out.println("Login OK para: " + usuario.getEmail());
+                                    } else {
+                                        out.println("{\"status\":\"erro\",\"mensagem\":\"Senha incorreta.\"}");
+                                        System.out.println("Login falhou: senha incorreta para " + usuario.getEmail());
+                                    }
+                                }
+                            } catch (MongoException me) {
+                                me.printStackTrace();
+                                out.println("{\"status\":\"erro\",\"mensagem\":\"Erro ao acessar o banco de dados.\"}");
+                                System.out.println("Erro de Mongo no login: " + me.getMessage());
+                            }
+
+                        } else {
+                            out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes ou inválidos.\"}");
+                            System.out.println("Requisição inválida para cadastro/login: " + json);
+                        }
+                    }
+                } catch (JsonSyntaxException e) {
+                    out.println("{\"status\": \"erro\", \"mensagem\": \"JSON inválido.\"}");
+                    System.out.println("Erro de sintaxe no JSON: " + e.getMessage());
+                }
+
+                System.out.println("Conexão encerrada.\n");
+
+            } catch (IOException e) {
+                if (running) {
+                    e.printStackTrace();
+                    System.out.println("Erro ao tratar cliente.");
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (mongoClient != null) {
-                mongoClient.close();
-            }
+        }
+
+        if (mongoClient != null) mongoClient.close();
+        System.out.println("Servidor parado.");
+    }
+
+    // ======================================================
+    // =================== MÉTODO STOP ======================
+    // ======================================================
+    public void stop() throws IOException {
+        running = false;
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            serverSocket.close(); // força IOException no accept() → encerra loop
         }
     }
 
-    // ---------------------- MONGO + DOTENV ----------------------
+    // ======================================================
+    // ==================== MAIN ORIGINAL ===================
+    // ======================================================
+    public static void main(String[] args) {
+        try {
+            MainServer server = new MainServer(5000);
+            server.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // =================== HELPERS: cadastro vs login ===================
+
+    private static boolean isCadastro(Usuario u) {
+        return u != null &&
+                u.getNome() != null && !u.getNome().isBlank() &&
+                u.getEmail() != null && !u.getEmail().isBlank() &&
+                u.getSenha() != null && !u.getSenha().isBlank() &&
+                u.getIdade() != null && u.getIdade() > 0;
+    }
+
+    private static boolean isLogin(Usuario u) {
+        // Para login, esperamos só email + senha (sem nome/idade)
+        return u != null &&
+                u.getEmail() != null && !u.getEmail().isBlank() &&
+                u.getSenha() != null && !u.getSenha().isBlank() &&
+                (u.getNome() == null || u.getNome().isBlank()) &&
+                u.getIdade() == null;
+    }
+
+    // ======================================================
+    // =================== MONGO + DOTENV ===================
+    // ======================================================
 
     private static void inicializarMongo() {
-        // Carrega .env da raiz do projeto
         Dotenv dotenv = Dotenv.load();
 
         String uri = dotenv.get("MONGODB_URI");
@@ -135,21 +242,23 @@ public class MainServer {
         estadoNarrativaCollection = db.getCollection(narrativaName);
 
         System.out.println("Conectado ao MongoDB.");
-        System.out.println("URI: " + uri);
-        System.out.println("DB: " + dbName + " | Coleção: " + collectionName);
-        System.out.println("Coleção histórico: " + historicoName + " | Coleção narrativa: " + narrativaName);
     }
 
-    private static void salvarNoMongo(Usuario u) {
+    private static void salvarNoMongo(Usuario u, String senhaHash) {
+        LocalDateTime agora = LocalDateTime.now(ZoneId.of("America/Sao_Paulo"));
+        String dataFormatada = agora.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
         Document doc = new Document("nome", u.getNome())
                 .append("email", u.getEmail())
-                .append("idade", u.getIdade());
+                .append("idade", u.getIdade())
+                .append("senhaHash", senhaHash)
+                .append("createdAt", dataFormatada);
 
         usuariosCollection.insertOne(doc);
         System.out.println("Usuário salvo no MongoDB: " + doc.toJson());
     }
 
-    // ---------------------- EVENTOS ----------------------
+    // ---------------------- EVENTOS (já existiam) ----------------------
 
     private static String processarEvento(JsonObject root) {
         String tipo = root.get("tipo").getAsString();
@@ -177,33 +286,56 @@ public class MainServer {
     }
 
     private static void registrarDialogo(String idUsuario, JsonObject root) {
+        String texto = root.has("texto") ? root.get("texto").getAsString() : "";
+        String persona = root.has("persona") ? root.get("persona").getAsString() : "narrador";
+        long timestamp = System.currentTimeMillis();
+
+        Dialogo dialogo = new Dialogo(texto, persona, timestamp);
+
         Document filtro = new Document("id_usuario", idUsuario);
+        Document pushDoc = new Document("texto", dialogo.getTexto())
+                .append("persona", dialogo.getPersona())
+                .append("timestamp", dialogo.getTimestamp());
 
         Document update = new Document("$set", new Document("id_usuario", idUsuario))
-                .append("$push", new Document("dialogos_vistos",
-                        new Document("texto", root.has("texto") ? root.get("texto").getAsString() : "")
-                                .append("persona", root.has("persona") ? root.get("persona").getAsString() : "narrador")
-                                .append("timestamp", System.currentTimeMillis())));
+                .append("$push", new Document("dialogos_vistos", pushDoc));
 
         estadoNarrativaCollection.updateOne(filtro, update, new com.mongodb.client.model.UpdateOptions().upsert(true));
     }
 
     private static String registrarTentativa(String idUsuario, String idMissao, JsonObject root) {
+        HistoricoMissao hm = new HistoricoMissao();
+        hm.setIdUsuario(idUsuario);
+        hm.setIdMissao(idMissao);
         String codigo = root.has("codigo_submetido") ? root.get("codigo_submetido").getAsString() : "";
         String erro = root.has("erro") ? root.get("erro").getAsString() : "";
-        String resultado = validarMissao(idMissao, codigo, erro);
+        hm.setCodigoSubmetido(codigo);
+        hm.setErro(erro);
+        hm.setData(new Date());
 
-        Document tentativa = new Document("id_usuario", idUsuario)
-                .append("id_missao", idMissao)
-                .append("resultado", resultado)
-                .append("data", new java.util.Date())
-                .append("codigo_submetido", codigo);
-
-        if (root.has("output")) {
-            tentativa.append("output", jsonArrayToStringList(root.get("output")));
+        List<String> outputList = new ArrayList<>();
+        if (root.has("output") && root.get("output").isJsonArray()) {
+            JsonArray arr = root.getAsJsonArray("output");
+            for (JsonElement e : arr) {
+                outputList.add(e.getAsString());
+            }
         }
-        if (!erro.isEmpty()) {
-            tentativa.append("erro", erro);
+        hm.setOutput(outputList);
+
+        String resultado = validarMissao(idMissao, codigo, erro);
+        hm.setResultado(resultado);
+
+        Document tentativa = new Document("id_usuario", hm.getIdUsuario())
+                .append("id_missao", hm.getIdMissao())
+                .append("resultado", hm.getResultado())
+                .append("data", hm.getData())
+                .append("codigo_submetido", hm.getCodigoSubmetido());
+
+        if (!hm.getOutput().isEmpty()) {
+            tentativa.append("output", hm.getOutput());
+        }
+        if (hm.getErro() != null && !hm.getErro().isEmpty()) {
+            tentativa.append("erro", hm.getErro());
         }
 
         historicoMissoesCollection.insertOne(tentativa);
@@ -304,11 +436,16 @@ public class MainServer {
         resp.addProperty("id_usuario", idUsuario);
 
         if (narrativa != null) {
-            resp.addProperty("ponto_historia_atual", narrativa.getString("ponto_historia_atual"));
-            resp.addProperty("ultima_missao", narrativa.getString("ultima_missao"));
-            resp.addProperty("missao_atual", narrativa.getString("missao_atual"));
-            resp.addProperty("status_missao", narrativa.getString("status_missao"));
-            resp.addProperty("modulo_status", narrativa.getString("modulo_status"));
+            if (narrativa.get("ponto_historia_atual") != null)
+                resp.addProperty("ponto_historia_atual", narrativa.getString("ponto_historia_atual"));
+            if (narrativa.get("ultima_missao") != null)
+                resp.addProperty("ultima_missao", narrativa.getString("ultima_missao"));
+            if (narrativa.get("missao_atual") != null)
+                resp.addProperty("missao_atual", narrativa.getString("missao_atual"));
+            if (narrativa.get("status_missao") != null)
+                resp.addProperty("status_missao", narrativa.getString("status_missao"));
+            if (narrativa.get("modulo_status") != null)
+                resp.addProperty("modulo_status", narrativa.getString("modulo_status"));
             resp.addProperty("ultima_atualizacao",
                     narrativa.get("ultima_atualizacao") != null ? narrativa.get("ultima_atualizacao").toString() : null);
         }
@@ -322,4 +459,53 @@ public class MainServer {
 
         return resp.toString();
     }
+
+    private void handleClient(Socket socket) {
+        try (
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
+        ) {
+            String json = in.readLine();
+            System.out.println("Recebido: " + json);
+
+            Gson gson = new Gson();
+
+            try {
+                JsonObject root = gson.fromJson(json, JsonObject.class);
+                if (root != null && root.has("tipo")) {
+                    String response = processarEvento(root);
+                    out.println(response);
+                } else {
+                    Usuario usuario = gson.fromJson(json, Usuario.class);
+
+                    if (usuario != null &&
+                            usuario.getNome() != null &&
+                            usuario.getEmail() != null) {
+
+                        if (usuariosCollection != null) {
+                            String senhaHash = BCrypt.hashpw(usuario.getSenha(), BCrypt.gensalt());
+                            salvarNoMongo(usuario, senhaHash);
+                            out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido e salvo no MongoDB.\"}");
+                        } else {
+                            out.println("{\"status\": \"ok\", \"mensagem\": \"JSON válido (modo teste - não persistido).\"}");
+                        }
+                    } else {
+                        out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes.\"}");
+                    }
+                }
+            } catch (JsonSyntaxException e) {
+                out.println("{\"status\": \"erro\", \"mensagem\": \"JSON inválido.\"}");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException ignored) {}
+        }
+
+        System.out.println("Conexão encerrada.\n");
+    }
+
 }

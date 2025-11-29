@@ -18,7 +18,7 @@ public class HttpToTcpServer {
     // Porta HTTP (para o React)
     private static final int HTTP_PORT = 8080;
 
-    // Host/porta do servidor TCP já existente
+    // Host/porta do servidor TCP
     private static final String TCP_HOST = "localhost";
     private static final int TCP_PORT = 5000;
 
@@ -26,13 +26,22 @@ public class HttpToTcpServer {
         HttpServer server = HttpServer.create(new InetSocketAddress(HTTP_PORT), 0);
         System.out.println("Adaptador HTTP para TCP rodando na porta " + HTTP_PORT + "...");
 
-        // Rota que o React vai chamar
+        // Cadastro de usuário
         server.createContext("/api/usuario", HttpToTcpServer::handleUsuario);
+
+        // 🔐 Login de usuário (usa o MESMO handler, só muda o path)
+        server.createContext("/api/usuario/login", HttpToTcpServer::handleUsuario);
+
+        // Eventos (dialogo, tentativa, etc) - JSON com "tipo"
         server.createContext("/api/evento", HttpToTcpServer::handleUsuario);
+
+        // Progresso (GET)
         server.createContext("/api/progresso", HttpToTcpServer::handleProgresso);
 
         server.start();
     }
+
+    // ---------------------- CRUD/Evento via POST ----------------------
 
     private static void handleUsuario(HttpExchange exchange) throws IOException {
         try {
@@ -58,7 +67,7 @@ public class HttpToTcpServer {
             String body = new String(is.readAllBytes(), StandardCharsets.UTF_8);
             System.out.println("HTTP Recebido (do React): " + body);
 
-            // 🔁 Repassa esse JSON para o servidor TCP antigo
+            // 🔁 Repassa esse JSON para o servidor TCP
             String respostaDoServidorTcp = enviarParaServidorTCP(body);
 
             // Devolve pro React exatamente o JSON que o TCP retornar
@@ -74,11 +83,14 @@ public class HttpToTcpServer {
             e.printStackTrace();
             String erro = "{\"status\":\"erro\",\"mensagem\":\"Erro interno no adaptador HTTP→TCP.\"}";
             byte[] respBytes = erro.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json; charset=utf-8");
             exchange.sendResponseHeaders(500, respBytes.length);
             exchange.getResponseBody().write(respBytes);
             exchange.getResponseBody().close();
         }
     }
+
+    // ---------------------- Progresso via GET ----------------------
 
     private static void handleProgresso(HttpExchange exchange) throws IOException {
         try {
@@ -102,7 +114,8 @@ public class HttpToTcpServer {
             String idUsuario = extrairQueryParam(query, "id_usuario");
 
             if (idUsuario == null || idUsuario.isEmpty()) {
-                byte[] respBytes = "{\"status\":\"erro\",\"mensagem\":\"id_usuario obrigatório\"}".getBytes(StandardCharsets.UTF_8);
+                byte[] respBytes = "{\"status\":\"erro\",\"mensagem\":\"id_usuario obrigatório\"}"
+                        .getBytes(StandardCharsets.UTF_8);
                 exchange.sendResponseHeaders(400, respBytes.length);
                 exchange.getResponseBody().write(respBytes);
                 exchange.getResponseBody().close();
@@ -141,10 +154,9 @@ public class HttpToTcpServer {
         return null;
     }
 
-    // ---------------------- Fala com o servidor TCP antigo ----------------------
+    // ---------------------- Fala com o servidor TCP ----------------------
 
     private static String enviarParaServidorTCP(String json) throws IOException {
-        // Abre conexão TCP com o servidor antigo
         try (Socket socket = new Socket(TCP_HOST, TCP_PORT)) {
             System.out.println("Conectado ao servidor TCP " + TCP_HOST + ":" + TCP_PORT);
 
@@ -152,14 +164,14 @@ public class HttpToTcpServer {
             BufferedReader in = new BufferedReader(
                     new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
 
-            // Envia o JSON como uma linha (igual ao ClienteTCP antigo)
             out.println(json);
 
-            // Lê uma linha de resposta (o JSON de resposta do servidor TCP)
             String resposta = in.readLine();
             System.out.println("Resposta do servidor TCP: " + resposta);
 
-            return resposta != null ? resposta : "{\"status\":\"erro\",\"mensagem\":\"Sem resposta do servidor TCP.\"}";
+            return resposta != null
+                    ? resposta
+                    : "{\"status\":\"erro\",\"mensagem\":\"Sem resposta do servidor TCP.\"}";
         }
     }
 }

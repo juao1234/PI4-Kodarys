@@ -1,8 +1,18 @@
 import UserIcon from "@mui/icons-material/Person"
 import { useAuth } from "../contexts/AuthContext"
+import { useNavigate } from "react-router-dom"
 
 export default function UserCard() {
     let { user, signOut } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        signOut();
+        navigate("/auth/login");
+    };
+
     return (
         <div className="flex items-center gap-2">
             <div className="bg-blue-500 p-2 rounded-full"><UserIcon/></div>
@@ -12,7 +22,12 @@ export default function UserCard() {
                     <p className="text-pink-500 font-bold">{user?.level} - {user?.classe}</p>
                 </div>
             </div>
-            <button onClick={signOut}>Sair</button>
+            <button 
+                onClick={handleLogout}
+                className="text-white"
+            >
+                Sair
+            </button>
         </div>
     )
 }
