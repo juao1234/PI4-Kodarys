@@ -10,7 +10,7 @@ export function HeroContent() {
         {user ? (
           <>
             <h1 className="text-4xl font-bold">
-              Bem-vindo(a), {user.email}!
+              Bem-vindo(a), {user.name}!
             </h1>
             <p className="text-md">
               Nível <span>{user.level}</span> • Classe{" "}

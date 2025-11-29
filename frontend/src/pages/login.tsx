@@ -97,7 +97,7 @@ export default function LoginPage() {
         {/* Senha */}
         <div className="flex flex-col gap-2">
           <p className="text-white font-inherit tracking-wide">Senha</p>
-          <div className="flex items-center gap-2 border border-slate-400 rounded-lg !p-2 justify-between flex-wrap">
+          <div className="flex flex-row items-center gap-2 border border-slate-400 rounded-lg !p-2 justify-between">
             <KeyIcon />
             <input
               type={showPassword ? "text" : "password"}
