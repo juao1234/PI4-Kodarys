@@ -32,9 +32,9 @@ const NavbarLocal: React.FC = () => {
         <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm border border-white/10 group-hover:bg-purple-500/20 transition-colors">
           <Sparkles className="w-5 h-5 text-purple-300" />
         </div>
-        <span className="font-bold text-lg tracking-wide text-white/90 drop-shadow-md">
+        <a href='/' className="font-bold text-lg tracking-wide text-white/90 drop-shadow-md">
           KODARYS
-        </span>
+        </a>
       </div>
 
       <div className="pointer-events-auto">
@@ -558,7 +558,7 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
                       <div className="w-full max-w-3xl flex flex-col gap-1 !py-1 !px-4 rounded-lg hover:bg-white/5 transition-colors duration-300">
                         <span className={`text-sm font-bold font-mono uppercase tracking-wider ${nameColor}`}>
                           {/* Usa o userId (que contém o email) ou 'Visitante' se não tiver email */}
-                          {msg.role === 'user' ? userId : name}
+                          {msg.role === 'user' ? user?.name : userId}
                         </span>
                         <p className="text-slate-200 text-sm md:text-base leading-relaxed font-light opacity-95 group-hover:opacity-100 whitespace-pre-wrap">
                           {content}

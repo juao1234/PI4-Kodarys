@@ -1,6 +1,7 @@
 import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 type CursoComProgresso = {
   id_curso: string;
@@ -19,6 +20,7 @@ export default function Cursos() {
     const user = useAuth().user
     const [cursos, setCursos] = useState<CursoComProgresso[]>([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate()
 
 useEffect(() => {
   if (!user) return;
@@ -81,12 +83,9 @@ return (
         <progress value={curso.porcentagem} max={100} />
 
         <button
-          onClick={() => {
-            // Navegação ou chamada de API para iniciar/continuar o curso
-            // Exemplo: navigate(`/curso/${curso.id_curso}/modulo/${curso.modulo_atual || 1}`)
-          }}
+          onClick={() => { navigate("/lab")}}
         >
-          {curso.st ? "Continuar módulo" : "Iniciar curso"}
+          {curso.st ? "Continuar" : "Iniciar"}
         </button>
       </div>
     ))}

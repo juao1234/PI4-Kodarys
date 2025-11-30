@@ -13,8 +13,6 @@ export default function HomePage() {
         <Navbar />
         <HeroContent />
       </div>
-
-      // NÃO IMPLEMENTADO AINDA, CASO HAJA TEMPO SERÁ IMPLEMENTADO!
       <main>
         <Cursos />
         <AboutUs />

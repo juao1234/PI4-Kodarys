@@ -6,6 +6,8 @@ import EyeIcon from "@mui/icons-material/Visibility";
 import EyeClosedIcon from "@mui/icons-material/VisibilityOff";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import * as Icons from '@mui/icons-material';
+
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -67,16 +69,22 @@ export default function LoginPage() {
   }
 
   return (
+    <>
     <div className="login-page">
-      <h1 className="text-white text-5xl">Kodarys</h1>
+      <h1 className="text-white text-5xl !mb-4">Kodarys</h1>
       <div className="flex flex-col gap-8 bg-slate-900/80 !p-16 border border-slate-950/30 rounded-2xl ">
         <div className="flex flex-col gap-3 !text-center">
-          <h3 className="text-white font-inherit tracking-wide text-xl font-bold">
-            Entre com a sua conta Kodarys
-          </h3>
-          <h4 className="text-neutral-400 font-inherit text-lg">
-            A aventura aguarda o seu retorno
-          </h4>
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-row gap-1">
+              <a href="/"><Icons.Home className="text-white hover:text-blue-500 transition-colors"/></a>
+              <h3 className="text-white font-inherit tracking-wide text-xl font-bold">
+                Entre com a sua conta Kodarys
+              </h3>
+            </div>
+            <h4 className="text-neutral-400 font-inherit text-lg">
+              A aventura aguarda o seu retorno
+            </h4>
+          </div>
         </div>
 
         {/* Email */}
@@ -115,8 +123,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-
-        {/* Botão */}
+          {/* Botão */}
         {loading ? (
           <button
             className="bg-blue-500 text-white !p-4 rounded-lg cursor-pointer"
@@ -144,5 +151,6 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

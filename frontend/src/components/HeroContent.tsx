@@ -15,7 +15,7 @@ export function HeroContent() {
             <p className="text-md">
               Nível <span>{user.level}</span> • Classe{" "}
               <span>{user.classe ?? "Aventureiro"}</span>
-            </p>
+            </p>        
           </>
         ) : (
           <>
@@ -32,15 +32,16 @@ export function HeroContent() {
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
           <LinkButton
-            href="#pricing"
+            href="/login"
             text={user ? "Continuar sua aventura" : "Comece sua aventura"}
           />
-          <a
-            href="/lab"
-            className="bg-amber-300 text-black font-bold !py-3 !px-5 !rounded-3xl transition-all hover:!text-white hover:!bg-amber-400 hover:shadow-lg hover:shadow-amber-500"
-          >
-            Abrir Lab IA
-          </a>
+
+          { user ? (
+            <LinkButton
+              href="/lab"
+              text="Abrir Lab IA"
+            />
+          ) : null}
         </div>
       </div>
     </div>
