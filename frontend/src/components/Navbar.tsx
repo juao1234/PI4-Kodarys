@@ -12,12 +12,7 @@ export default function Navbar() {
         <h1 className="text-2xl">Kodarys</h1>
         <ul className="flex items-center gap-10">
           {user ? (
-            <Link
-              to="/profile"
-              className="cursor-pointer hover:opacity-80 transition-opacity"
-            >
-              <UserCard />
-            </Link>
+            <UserCard />
           ) : (
             <Link to="/auth/login" className="text-white">
               Login
