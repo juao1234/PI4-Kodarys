@@ -1,5 +1,6 @@
 import { useAuth } from "../contexts/AuthContext";
 import { LinkButton } from "./LinkButton";
+import Cursos from "../components/Cursos";
 
 export function HeroContent() {
   const { user } = useAuth();
@@ -9,13 +10,7 @@ export function HeroContent() {
       <div className="flex flex-col gap-5 text-center">
         {user ? (
           <>
-            <h1 className="text-4xl font-bold">
-              Bem-vindo(a), {user.name}!
-            </h1>
-            <p className="text-md">
-              Nível <span>{user.level}</span> • Classe{" "}
-              <span>{user.classe ?? "Aventureiro"}</span>
-            </p>        
+          <Cursos/>
           </>
         ) : (
           <>
@@ -31,17 +26,15 @@ export function HeroContent() {
         )}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-          <LinkButton
-            href="/login"
-            text={user ? "Continuar sua aventura" : "Comece sua aventura"}
-          />
-
           { user ? (
+            null
+          ) : (
             <LinkButton
-              href="/lab"
-              text="Abrir Lab IA"
-            />
-          ) : null}
+            href="/register"
+            text={"Comece sua aventura"}
+          />
+          )
+          }
         </div>
       </div>
     </div>
