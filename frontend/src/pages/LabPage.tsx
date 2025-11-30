@@ -1,8 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { Send, Code2, Sparkles, Menu, Play, Terminal, X } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext'; // Importação do contexto de autenticação
-import { useNavigate } from 'react-router-dom';
+import { Send, Code2, Sparkles, Play, Terminal, X, Home } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   PERSONAS,
   DEFAULT_MISSION,
@@ -29,6 +29,7 @@ const MODEL_NAME = 'gemini-2.5-flash';
 const NavbarLocal: React.FC = () => {
   return (
     <nav className="absolute top-0 left-0 w-full z-50 !px-6 !py-4 flex justify-between items-center pointer-events-none">
+      {/* Lado Esquerdo: Logo */}
       <div className="flex items-center gap-2 pointer-events-auto cursor-pointer group">
         <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm border border-white/10 group-hover:bg-purple-500/20 transition-colors">
           <Sparkles className="w-5 h-5 text-purple-300" />
@@ -38,10 +39,15 @@ const NavbarLocal: React.FC = () => {
         </a>
       </div>
 
+      {/* Lado Direito: Botão Voltar */}
       <div className="pointer-events-auto">
-        <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white">
-          <Menu className="w-6 h-6" />
-        </button>
+        <Link 
+          to="/" 
+          className="flex items-center gap-2 !px-4 !py-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white border border-transparent hover:border-white/10"
+        >
+          <span className="text-sm font-medium">Voltar</span>
+          <Home className="w-5 h-5" />
+        </Link>
       </div>
     </nav>
   );
@@ -124,13 +130,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 };
 
 export default function LabPage() {
-  // Utiliza o contexto de autenticação
   const { user } = useAuth();
-  // Se não tiver email, userId fica vazio
   const userId = user?.email;
   const navigate = useNavigate();
   const moduleCompletionSentRef = useRef(false);
-  
 
   const [code, setCode] = useState(STARTER_CODE);
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
@@ -142,7 +145,6 @@ export default function LabPage() {
   const [pyStatus, setPyStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [chatInput, setChatInput] = useState('');
   
-  // Mensagens começam vazias ou com initialMessages se for primeira vez
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialMessages);
   
   const [isStreaming, setIsStreaming] = useState(false);
@@ -150,7 +152,6 @@ export default function LabPage() {
   const [missionStatus, setMissionStatus] = useState<MissionStatus>('incomplete');
   const storageKey = useMemo(() => `kodarys-code-${userId ?? 'anon'}`, [userId]);
 
-  // Refs auxiliares
   const placeholderIndexRef = useRef<number | null>(null);
   const lastPersonaRef = useRef<PersonaKey>('sygnus');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -223,20 +224,17 @@ export default function LabPage() {
       if (!userId) return; // Não carrega se não tiver user
       
       try {
-        // Usa 'userId' no parâmetro da URL
         const res = await fetch(`http://localhost:8080/api/progresso?userId=${encodeURIComponent(userId)}`);
         if (!res.ok) return;
         
         const data = await res.json();
         
-        // 1. Restaurar Missão Atual
         if (data.missao_atual) {
           setCurrentMission(data.missao_atual);
         } else if (data.ultima_missao) {
           setCurrentMission(data.ultima_missao);
         }
 
-        // 2. Restaurar Status da Missão
         if (data.status_missao === 'CONCLUIDA') {
           setMissionStatus('complete');
         } else {
@@ -248,7 +246,6 @@ export default function LabPage() {
           setMissionStatus('complete');
         }
 
-        // Restaura o histórico do chat
         if (data.historico_dialogos && Array.isArray(data.historico_dialogos) && data.historico_dialogos.length > 0) {
           const loadedMsgs: ChatMessage[] = data.historico_dialogos.map((d: any) => ({
             role: d.persona === 'user' ? 'user' : 'model',
@@ -273,7 +270,6 @@ export default function LabPage() {
     fetchProgress();
   }, [userId]);
 
-  // Função para salvar mensagens no backend
   const persistDialog = async (text: string, persona: PersonaKey | 'user') => {
     try {
       await fetch('http://localhost:8080/api/evento', {
@@ -399,7 +395,6 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
     const persona = forcedPersona ?? pickAutoPersona(stage, lastPersonaRef.current);
     lastPersonaRef.current = persona;
     
-    // Salva a mensagem do usuário no banco (se não for silenciosa)
     if (!silentUser) {
       void persistDialog(prompt, 'user');
     }
@@ -407,7 +402,6 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
     setChatMessages((prev) => {
       const withUser = silentUser ? [] : [{ role: 'user' as const, text: prompt }];
       const combined = [...prev, ...withUser, { role: 'model' as const, text: '', persona }];
-      // se a mensagem do usuário é silenciosa (auto), o índice do placeholder é o último item
       placeholderIndexRef.current = combined.length - 1;
       return combined;
     });
@@ -483,7 +477,6 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
         });
       }
       
-      // Salva a resposta do modelo no banco
       void persistDialog(assembled, persona);
       
       if (missionStatus === 'awaiting_feedback') {
@@ -617,8 +610,7 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
                     <div key={idx} className="group animate-fade-in-up w-full flex justify-center">
                       <div className="w-full max-w-3xl flex flex-col gap-1 !py-1 !px-4 rounded-lg hover:bg-white/5 transition-colors duration-300">
                         <span className={`text-sm font-bold font-mono uppercase tracking-wider ${nameColor}`}>
-                          {/* Usa o userId (que contém o email) ou 'Visitante' se não tiver email */}
-                          {msg.role === 'user' ? user?.name : userId}
+                          {msg.role === 'user' ? (user?.name || userId) : name}
                         </span>
                         <p className="text-slate-200 text-sm md:text-base leading-relaxed font-light opacity-95 group-hover:opacity-100 whitespace-pre-wrap">
                           {content}
