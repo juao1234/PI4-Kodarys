@@ -54,7 +54,7 @@ export default function LoginPage() {
       if (data.status === "ok") {
         alert("Login realizado com sucesso!");
         await signIn(email);
-        navigate("/");
+        navigate("/progresso");
       } else {
         alert(data.mensagem || "Erro ao fazer login.");
       }
