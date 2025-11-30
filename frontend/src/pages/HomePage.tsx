@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import { HeroContent } from "../components/HeroContent";
 import Cursos from "../components/Cursos"
-import AboutUs from "../components/AboutUs";
-import Pricing from "../components/Princing";
+import { useAuth} from "../contexts/AuthContext"
 
 export default function HomePage() {
   const [moduleStatus, setModuleStatus] = useState<string | null>(null);
+  const { user } = useAuth()
 
   useEffect(() => {
     const status = sessionStorage.getItem("kodarys-module-status");
@@ -15,6 +15,7 @@ export default function HomePage() {
       sessionStorage.removeItem("kodarys-module-status");
     }
   }, []);
+
 
 
   return (
@@ -30,10 +31,16 @@ export default function HomePage() {
         )}
         <HeroContent />
       </div>
-      <main>
-        <Cursos />
-        <AboutUs />
-        <Pricing />
+      <main id="cursos">
+        {
+        user ? (
+          <>
+          <Cursos />
+          </>
+        ) : (
+          null
+        )
+      }
       </main>
     </>
   );
