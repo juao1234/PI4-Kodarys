@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-// import Navbar from "../components/Navbar"; <--- REMOVA OU COMENTE ESSA LINHA
 import { HeroContent } from "../components/HeroContent";
 import Cursos from "../components/Cursos"
 import { useAuth} from "../contexts/AuthContext"
@@ -19,7 +18,7 @@ export default function HomePage() {
   return (
     <>
       <div className="main-content relative">
-        {/* Navbar removida daqui para n�o duplicar com o Hero */}
+  
         
         {moduleStatus === 'concluido' && (
           <div className="absolute top-24 left-0 w-full z-50 flex justify-center px-4">
