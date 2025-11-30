@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
+// import Navbar from "../components/Navbar"; <--- REMOVA OU COMENTE ESSA LINHA
 import { HeroContent } from "../components/HeroContent";
 import Cursos from "../components/Cursos"
 import { useAuth} from "../contexts/AuthContext"
@@ -16,31 +16,24 @@ export default function HomePage() {
     }
   }, []);
 
-
-
   return (
     <>
-      <div className="main-content">
-        <Navbar />
+      <div className="main-content relative">
+        {/* Navbar removida daqui para n�o duplicar com o Hero */}
+        
         {moduleStatus === 'concluido' && (
-          <div className="flex justify-center w-full !px-4">
-            <div className="bg-green-600 text-white font-semibold !px-4 !py-2 rounded-lg shadow-lg shadow-green-900/30 border border-green-400/70">
-              Módulo concluído! Seu progresso foi salvo.
+          <div className="absolute top-24 left-0 w-full z-50 flex justify-center px-4">
+            <div className="bg-green-600/90 backdrop-blur text-white font-semibold px-6 py-3 rounded-lg shadow-[0_0_20px_rgba(34,197,94,0.5)] border border-green-400">
+              \u2728 M�dulo conclu�do! Progresso salvo no grim�rio.
             </div>
           </div>
         )}
+        
         <HeroContent />
       </div>
-      <main id="cursos">
-        {
-        user ? (
-          <>
-          <Cursos />
-          </>
-        ) : (
-          null
-        )
-      }
+      
+      <main id="cursos" className="relative z-10 bg-[#0f1016]">
+        {user && <Cursos />}
       </main>
     </>
   );

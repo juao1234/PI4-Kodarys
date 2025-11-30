@@ -1,12 +1,8 @@
 import { useState } from "react";
 import "../styles/login.css";
-import KeyIcon from "@mui/icons-material/Key";
-import UserIcon from "@mui/icons-material/Person";
-import EyeIcon from "@mui/icons-material/Visibility";
-import EyeClosedIcon from "@mui/icons-material/VisibilityOff";
+import { Eye, EyeOff, Home, LockKeyhole, User } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import * as Icons from '@mui/icons-material';
 
 
 export default function LoginPage() {
@@ -76,7 +72,7 @@ export default function LoginPage() {
         <div className="flex flex-col gap-3 !text-center">
           <div className="flex flex-col gap-1">
             <div className="flex flex-row gap-1">
-              <a href="/"><Icons.Home className="text-white hover:text-blue-500 transition-colors"/></a>
+              <a href="/"><Home className="text-white hover:text-blue-500 transition-colors" size={20} /></a>
               <h3 className="text-white font-inherit tracking-wide text-xl font-bold">
                 Entre com a sua conta Kodarys
               </h3>
@@ -91,7 +87,7 @@ export default function LoginPage() {
         <div className="flex flex-col gap-2">
           <p className="text-white font-inherit tracking-wide">Email</p>
           <div className="flex items-center gap-2 border border-neutral-400 rounded-lg !p-2">
-            <UserIcon className="!mr-4.3" />
+            <User className="!mr-4.3" size={20} />
             <input
               type="email"
               placeholder="Digite seu email"
@@ -106,7 +102,7 @@ export default function LoginPage() {
         <div className="flex flex-col gap-2">
           <p className="text-white font-inherit tracking-wide">Senha</p>
           <div className="flex flex-row items-center gap-2 border border-slate-400 rounded-lg !p-2 justify-between">
-            <KeyIcon />
+            <LockKeyhole size={20} />
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Digite sua senha"
@@ -116,9 +112,9 @@ export default function LoginPage() {
             />
             <div className="cursor-pointer">
               {showPassword ? (
-                <EyeClosedIcon onClick={() => setShowPassword(!showPassword)} />
+                <EyeOff onClick={() => setShowPassword(!showPassword)} />
               ) : (
-                <EyeIcon onClick={() => setShowPassword(!showPassword)} />
+                <Eye onClick={() => setShowPassword(!showPassword)} />
               )}
             </div>
           </div>

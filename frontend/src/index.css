@@ -1,48 +1,71 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300&display=swap');
 @import "tailwindcss";
 
 :root {
-  font-family: 'Merriweather', serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Merriweather', serif; /* Fonte padr�o RPG */
+  background-color: #0f1016; /* Fundo bem escuro */
+  color: #e2e8f0;
 }
 
-.main-content{
-  height: 100vh;
+/* Garante altura total e rolagem suave */
+html, body {
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
+.main-content {
   width: 100%;
+  min-height: 100vh;
+  /* Overlay escuro para garantir que o texto apare�a sobre a imagem */
+  background-image: linear-gradient(to bottom, rgba(15, 16, 22, 0.85), rgba(15, 16, 22, 0.95)), url('/homepage.png');
   background-size: cover;
   background-position: center;
-  background-image: linear-gradient(rgba(0,0,0,.5), rgba(0,0,0,.5) ), url(/homepage.png);
+  background-attachment: fixed;
 }
 
-.hidden{
-  display: none;
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+.animate-float {
+    animation: float 4s ease-in-out infinite;
 }
 
-a{
-  text-decoration: none;
-  transition: color .3s ease;
+/* Efeito de Digita��o (Typing Effect) */
+.typing-effect {
+    display: inline-block;
+    overflow: hidden; /* Garante que o texto n�o apare�a antes de "ser digitado" */
+    border-right: .15em solid rgba(34, 211, 238, 0.8); /* O cursor piscante ciano */
+    white-space: nowrap; /* Mant�m tudo na mesma linha */
+    margin: 0 auto; /* Centraliza */
+    letter-spacing: 0.15em; /* Espa�amento para ficar mais "tech" */
+    animation: 
+      typing 3.5s steps(30, end), /* Velocidade da digita��o */
+      blink-caret .75s step-end infinite; /* Velocidade do cursor */
+    max-width: fit-content;
 }
 
-a:hover{
-  /* ISSO FUNCIONA PAR APLICAR ESTILOS DO TAILWIND EM TAGS HTML DIRETAMENTE */
-  @apply text-blue-300
+/* Keyframes para a digita��o */
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
 }
 
-
-h1,h2,h3,h4,h5,h6,p,button,input,label{
-  font-family: 'Merriweather', serif !important;
+/* Keyframes para o cursor piscar */
+@keyframes blink-caret {
+  from, to { border-color: transparent }
+  50% { border-color: rgba(34, 211, 238, 0.8); }
 }
 
-p{
-  font-family: 'Merriweather', serif !important;
+/* Wrapper para reiniciar a anima��o (loop) */
+.typing-wrapper {
+    display: flex;
+    justify-content: center;
+    /* Oculta e mostra novamente para reiniciar a anima��o CSS */
+    animation: hideShow 5s infinite; 
+}
+
+@keyframes hideShow {
+  0%, 80% { opacity: 1; }
+  90%, 100% { opacity: 0; } /* Breve desaparecimento para resetar */
 }
