@@ -31,17 +31,6 @@ export default function HomePage() {
         )}
         <HeroContent />
       </div>
-      <main id="cursos">
-        {
-        user ? (
-          <>
-          <Cursos />
-          </>
-        ) : (
-          null
-        )
-      }
-      </main>
     </>
   );
 }
