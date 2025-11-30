@@ -1,14 +1,21 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // 1. Importe useNavigate
 import { useAuth } from "../contexts/AuthContext";
 import { LogIn, ArrowLeft, User, LogOut, Sparkles } from "lucide-react";
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate(); // 2. Inicialize o hook
   const isHomePage = location.pathname === "/";
 
-  // Estilo base dos botões e containers Glass
-  const glassButtonStyle = "flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 backdrop-blur-md transition-all duration-300 group shadow-lg";
+  // 3. Crie uma função para lidar com o Logout e o Redirecionamento
+  const handleLogout = async () => {
+    await signOut(); // Aguarda a limpeza dos dados
+    navigate("/");   // Redireciona para a Home
+  };
+
+  // Estilo base dos botões
+  const glassButtonStyle = "flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 hover:border-cyan-500/50 transition-all duration-300 group shadow-lg";
 
   return (
     <nav className="absolute top-0 left-0 w-full z-50 pointer-events-none flex justify-center">
@@ -43,9 +50,8 @@ export default function Navbar() {
           {user ? (
             // === USUÁRIO LOGADO ===
             <div className="flex items-center gap-4 animate-fade-in">
-              
               <div 
-                className={`${glassButtonStyle} border-purple-500/30 bg-purple-900/10 pr-8 cursor-default`}
+                className={`${glassButtonStyle} hover:!border-purple-500/50 hover:bg-purple-900/20 pr-8 cursor-default`}
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-cyan-500 flex items-center justify-center shadow-inner">
                   <User className="w-5 h-5 text-white" />
@@ -53,15 +59,13 @@ export default function Navbar() {
                 <div className="flex flex-col leading-none">
                   <span className="text-[0.65rem] text-purple-300 uppercase font-bold tracking-wider mb-0.5">Mago</span>
                   <span className="text-sm font-bold text-white tracking-wide">
-                    {/* Formata o nome para remover o @dominio se for um email */}
                     {user.name.includes('@') ? user.name.split('@')[0] : user.name}
                   </span>
                 </div>
               </div>
 
-              {/* Botão de Logout */}
               <button 
-                onClick={signOut}
+                onClick={handleLogout} 
                 className="group flex items-center gap-2 px-5 py-3 rounded-full bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/50 backdrop-blur-md transition-all text-red-200/80 hover:text-red-100 shadow-lg cursor-pointer"
                 title="Sair do Sistema"
               >
@@ -85,7 +89,7 @@ export default function Navbar() {
             ) : (
               <Link 
                 to="/" 
-                className={`${glassButtonStyle} hover:bg-white/10 hover:border-cyan-500/50 pr-8 pl-6 hover:pl-5 transition-all`}
+                className={`${glassButtonStyle} pr-8 pl-6 hover:pl-5 transition-all`}
               >
                 <ArrowLeft className="w-5 h-5 text-cyan-300 group-hover:-translate-x-1 transition-transform duration-300" />
                 <span className="text-sm font-medium text-white/80 group-hover:text-white font-serif tracking-wide leading-none mt-[1px]">

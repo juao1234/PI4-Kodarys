@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Play, Sparkles, Clock, BookOpen, Lock, Trophy, Star } from "lucide-react";
 import Navbar from "../components/Navbar";
@@ -83,6 +83,18 @@ export default function ProgressPage() {
 
   // Formata o nome para exibição (remove email)
   const displayName = user?.name ? (user.name.includes('@') ? user.name.split('@')[0] : user.name) : "Viajante";
+
+  if (loading && !progress) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <Navbar />
+        <div className="flex items-center gap-3 text-slate-300">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+          Sincronizando seu progresso...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full min-h-screen bg-black overflow-hidden font-sans text-white selection:bg-cyan-500/30">
@@ -206,7 +218,7 @@ export default function ProgressPage() {
   );
 }
 
-function StatCard({ icon, label, value, delay }: { icon: React.ReactNode, label: string, value: string, delay: string }) {
+function StatCard({ icon, label, value, delay }: { icon: ReactNode, label: string, value: string, delay: string }) {
   return (
     <div 
       className="bg-[#0a0a0f]/60 border border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 hover:bg-white/5 hover:border-white/20 transition-all duration-300 backdrop-blur-md group shadow-lg"
