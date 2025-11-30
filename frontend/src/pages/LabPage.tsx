@@ -405,10 +405,11 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
     }
 
     setChatMessages((prev) => {
-      const placeholderIndex = prev.length + 1;
-      placeholderIndexRef.current = placeholderIndex;
       const withUser = silentUser ? [] : [{ role: 'user' as const, text: prompt }];
-      return [...prev, ...withUser, { role: 'model' as const, text: '', persona }];
+      const combined = [...prev, ...withUser, { role: 'model' as const, text: '', persona }];
+      // se a mensagem do usuário é silenciosa (auto), o índice do placeholder é o último item
+      placeholderIndexRef.current = combined.length - 1;
+      return combined;
     });
     setIsStreaming(true);
 
@@ -626,7 +627,7 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
                           <div className="flex justify-end">
                             <button
                               onClick={() => {
-                                setCode(snippet);
+                                handleSetCode(snippet);
                                 setStage('practice');
                               }}
                               className="text-xs !px-2 !py-1 rounded bg-purple-700/60 text-white border border-purple-500/50 hover:bg-purple-600 transition-colors"
