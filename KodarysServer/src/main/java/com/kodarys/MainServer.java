@@ -41,7 +41,7 @@ public class MainServer {
     private static MongoCollection<Document> historicoMissoesCollection;
     private static MongoCollection<Document> estadoNarrativaCollection;
     private static final String[] MISSION_SEQUENCE = new String[] {
-            "M01_INTRO", "M02_VARIAVEIS", "M03_INPUT", "M04_OPERADORES"
+            "M01_INTRO", "M02_VARIAVEIS", "M03_INPUT", "M04_OPERADORES", "M05_FINAL"
     };
 
     // ======= CAMPOS PARA START/STOP DO SERVIDOR =========
@@ -292,6 +292,10 @@ public class MainServer {
             return registrarTentativa(idUsuario, idMissao, root);
         }
 
+        if ("concluir_modulo".equalsIgnoreCase(tipo)) {
+            return concluirModulo(idUsuario, idMissao);
+        }
+
         return "{\"status\":\"erro\",\"mensagem\":\"tipo desconhecido\"}";
     }
 
@@ -411,6 +415,14 @@ public class MainServer {
             return (hasOperator && printsResult && avoidsOnlyString) ? "SUCESSO" : "FALHA";
         }
 
+        if (idMissao.startsWith("M05")) {
+            boolean hasInput = codigo.toLowerCase().contains("input(");
+            boolean convertsAge = codigo.toLowerCase().contains("int(");
+            boolean addsFive = codigo.matches("(?s).*\\+\\s*5.*");
+            boolean printsResult = codigo.contains("print");
+            return (hasInput && convertsAge && addsFive && printsResult) ? "SUCESSO" : "FALHA";
+        }
+
         return "PENDENTE";
     }
 
@@ -476,6 +488,22 @@ public class MainServer {
         }
 
         return resp.toString();
+    }
+
+    private static String concluirModulo(String idUsuario, String idMissao) {
+        String missaoFinal = (idMissao != null && !idMissao.isEmpty()) ? idMissao : MISSION_SEQUENCE[MISSION_SEQUENCE.length - 1];
+        Document filtro = new Document("id_usuario", idUsuario);
+
+        Document set = new Document("ultima_missao", missaoFinal)
+                .append("missao_atual", missaoFinal)
+                .append("status_missao", "CONCLUIDA")
+                .append("modulo_status", "CONCLUIDO")
+                .append("ultima_atualizacao", new java.util.Date());
+
+        Document update = new Document("$set", set);
+        estadoNarrativaCollection.updateOne(filtro, update, new com.mongodb.client.model.UpdateOptions().upsert(true));
+
+        return "{\"status\":\"ok\",\"mensagem\":\"Modulo concluido registrado.\"}";
     }
 
     // Métodos mantidos para compatibilidade com implementações anteriores

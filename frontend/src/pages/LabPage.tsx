@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { Send, Code2, Sparkles, Menu, Play, Terminal, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext'; // Importação do contexto de autenticação
+import { useNavigate } from 'react-router-dom';
 import {
   PERSONAS,
   DEFAULT_MISSION,
@@ -127,6 +128,8 @@ export default function LabPage() {
   const { user } = useAuth();
   // Se não tiver email, userId fica vazio
   const userId = user?.email;
+  const navigate = useNavigate();
+  const moduleCompletionSentRef = useRef(false);
   
 
   const [code, setCode] = useState(STARTER_CODE);
@@ -145,6 +148,7 @@ export default function LabPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [stage, setStage] = useState<Stage>('story');
   const [missionStatus, setMissionStatus] = useState<MissionStatus>('incomplete');
+  const storageKey = useMemo(() => `kodarys-code-${userId ?? 'anon'}`, [userId]);
 
   // Refs auxiliares
   const placeholderIndexRef = useRef<number | null>(null);
@@ -190,6 +194,20 @@ export default function LabPage() {
     void ensurePyodide();
   }, [pyodide, pyStatus]);
 
+  // Carrega o último código digitado (por usuário)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved !== null) {
+        setCode(saved);
+      } else {
+        setCode(STARTER_CODE);
+      }
+    } catch {
+      // ignora erro de storage
+    }
+  }, [storageKey]);
+
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -223,6 +241,11 @@ export default function LabPage() {
           setMissionStatus('complete');
         } else {
           setMissionStatus('incomplete');
+        }
+
+        if (data.modulo_status === 'CONCLUIDO') {
+          setModuleCompleted(true);
+          setMissionStatus('complete');
         }
 
         // Restaura o histórico do chat
@@ -294,6 +317,33 @@ export default function LabPage() {
     }
   };
 
+  const persistModuleCompletion = async () => {
+    if (!userId || moduleCompletionSentRef.current) return;
+    moduleCompletionSentRef.current = true;
+    try {
+      await fetch('http://localhost:8080/api/evento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id_usuario: userId,
+          id_missao: currentMission,
+          tipo: 'concluir_modulo',
+        }),
+      });
+    } catch {
+      // silencia erro
+    }
+  };
+
+  const handleSetCode = (newCode: string) => {
+    setCode(newCode);
+    try {
+      localStorage.setItem(storageKey, newCode);
+    } catch {
+      // ignora erro de storage
+    }
+  };
+
   const runCode = async () => {
     setStage('practice');
     if (!pyodide) {
@@ -355,10 +405,11 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
     }
 
     setChatMessages((prev) => {
-      const placeholderIndex = prev.length + 1;
-      placeholderIndexRef.current = placeholderIndex;
       const withUser = silentUser ? [] : [{ role: 'user' as const, text: prompt }];
-      return [...prev, ...withUser, { role: 'model' as const, text: '', persona }];
+      const combined = [...prev, ...withUser, { role: 'model' as const, text: '', persona }];
+      // se a mensagem do usuário é silenciosa (auto), o índice do placeholder é o último item
+      placeholderIndexRef.current = combined.length - 1;
+      return combined;
     });
     setIsStreaming(true);
 
@@ -490,6 +541,15 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
       setModuleCompleted(true);
       const congrats = `${PERSONAS.sygnus.prefix}: Parabéns! Você concluiu o Módulo. Sua saudação final ecoou por toda Kodarys.`;
       setChatMessages((prev) => [...prev, { role: 'model', persona: 'sygnus', text: congrats }]);
+      void persistModuleCompletion();
+      sessionStorage.setItem('kodarys-module-status', 'concluido');
+      setTimeout(() => {
+        if (window.history.length > 1) {
+          navigate(-1);
+        } else {
+          navigate('/', { replace: true });
+        }
+      }, 800);
       return;
     }
     setTimeout(() => {
@@ -567,7 +627,7 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
                           <div className="flex justify-end">
                             <button
                               onClick={() => {
-                                setCode(snippet);
+                                handleSetCode(snippet);
                                 setStage('practice');
                               }}
                               className="text-xs !px-2 !py-1 rounded bg-purple-700/60 text-white border border-purple-500/50 hover:bg-purple-600 transition-colors"
@@ -633,7 +693,7 @@ Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o pró
               <div className="flex-1 min-h-[50vh]">
                 <CodeEditor
                   code={code}
-                  setCode={setCode}
+                  setCode={handleSetCode}
                   runCode={runCode}
                   terminalOutput={terminalOutput}
                   executionError={executionError}
