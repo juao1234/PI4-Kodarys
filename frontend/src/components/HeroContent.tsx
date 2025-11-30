@@ -1,6 +1,6 @@
 import { useAuth } from "../contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ChevronDown, Play, Sparkles, Database, Zap, AlertTriangle, BookOpen } from 'lucide-react';
+import { ChevronDown, Play, Sparkles, Database, Zap, AlertTriangle, BookOpen, LogIn } from 'lucide-react';
 
 export function HeroContent() {
   const { user } = useAuth();
@@ -8,11 +8,6 @@ export function HeroContent() {
   return (
     <div className="w-full flex flex-col relative font-sans text-white">
       
-      {/* CORREÇÃO DA ANIMAÇÃO:
-          - width: 31ch (31 caracteres, o tamanho exato da frase)
-          - steps(31): 31 passos para bater com cada letra
-          - white-space: nowrap: garante que não quebre linha
-      */}
       <style>{`
         .typing-effect {
           display: inline-block;
@@ -20,8 +15,8 @@ export function HeroContent() {
           border-right: 3px solid rgba(34, 211, 238, 0.8);
           white-space: nowrap;
           margin: 0 auto;
-          font-family: 'Fira Code', monospace; /* Fonte monoespaçada é essencial para o cálculo ch funcionar bem */
-          width: 0; /* Começa zerado */
+          font-family: 'Fira Code', monospace;
+          width: 0;
           animation: 
             typing 3.5s steps(31, end) forwards,
             blink-caret .75s step-end infinite;
@@ -35,7 +30,7 @@ export function HeroContent() {
 
         @keyframes typing {
           from { width: 0 }
-          to { width: 31ch } /* Largura exata da frase */
+          to { width: 31ch }
         }
 
         @keyframes blink-caret {
@@ -44,15 +39,10 @@ export function HeroContent() {
         }
       `}</style>
 
-      {/* =====================================================================================
-          FILTRO GLOBAL
-         ===================================================================================== */}
+      {/* FILTRO GLOBAL */}
       <div className="absolute inset-0 bg-[#050508]/80 pointer-events-none z-0" />
 
-
-      {/* =====================================================================================
-          SEÇÃO 1: TELA DE TÍTULO
-         ===================================================================================== */}
+      {/* SEÇÃO 1: TELA DE TÍTULO */}
       <section className="h-screen w-full flex flex-col items-center justify-center relative overflow-hidden z-10">
         
         {/* Barra Superior */}
@@ -68,7 +58,24 @@ export function HeroContent() {
               Kodarys
             </span>
           </div>
-          <div></div>
+
+          {/* Botão de Login ou Status do Usuário */}
+          <div className="relative z-30">
+            {!user ? (
+              <Link 
+                to="/auth/login"
+                className="flex items-center gap-2 px-6 py-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-md text-white/90 hover:bg-white/10 hover:text-cyan-300 hover:border-cyan-500/50 transition-all duration-300 text-sm font-bold tracking-widest font-serif"
+              >
+                <LogIn className="w-4 h-4" />
+                LOGIN
+              </Link>
+            ) : (
+               <div className="flex items-center gap-2 px-6 py-2 rounded-full border border-purple-500/30 bg-purple-900/20 backdrop-blur-md text-purple-200">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                  <span className="text-xs tracking-widest font-bold uppercase">{user.name}</span>
+               </div>
+            )}
+          </div>
         </div>
 
         {/* Conteúdo Central */}
@@ -87,7 +94,6 @@ export function HeroContent() {
               KODARYS
             </h1>
             
-            {/* ANIMAÇÃO DE DIGITAÇÃO CORRIGIDA */}
             <div className="mt-4 h-8 relative w-full flex justify-center">
                 <div className="typing-wrapper">
                     <code className="text-cyan-300 text-sm md:text-xl typing-effect drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">
@@ -97,7 +103,6 @@ export function HeroContent() {
             </div>
           </div>
 
-          {/* BOTÃO START */}
           <div className="mt-12">
             <Link 
               to={user ? "/lab" : "/register"}
@@ -116,15 +121,9 @@ export function HeroContent() {
         </div>
       </section>
 
-
-      {/* =====================================================================================
-          SEÇÃO 2: A LENDA
-         ===================================================================================== */}
+      {/* SEÇÃO 2: A LENDA */}
       <section className="relative w-full flex justify-center px-6 py-32 z-10">
-        
         <div className="max-w-6xl w-full relative">
-          
-          {/* Título da Seção */}
           <div className="text-center mb-32 relative z-10">
             <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full border border-amber-500/30 bg-amber-900/20 text-amber-200 text-xs tracking-[0.2em] font-mono mb-6 backdrop-blur-md">
               <Sparkles className="w-3 h-3" />
@@ -135,12 +134,9 @@ export function HeroContent() {
             </h2>
           </div>
 
-          {/* ESTRUTURA DA TIMELINE */}
           <div className="relative">
-            {/* Linha Central */}
             <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-[2px] bg-gradient-to-b from-transparent via-amber-500/30 to-transparent -translate-x-1/2 md:translate-x-0"></div>
 
-            {/* CARD 1: O CÓDIGO */}
             <TimelineCard 
               side="left"
               icon={<Database className="w-5 h-5 text-cyan-300" />}
@@ -150,7 +146,6 @@ export function HeroContent() {
               Houve um tempo em que a humanidade descobriu a verdade suprema: o mundo não era um acaso divino, mas sim um imenso programa, sustentado por linhas invisíveis de um código fonte primordial.
             </TimelineCard>
 
-            {/* CARD 2: A MAGIA */}
             <TimelineCard 
               side="right"
               icon={<Zap className="w-5 h-5 text-amber-300" />}
@@ -160,7 +155,6 @@ export function HeroContent() {
               Mas a ambição não conhece limites. Os sábios ousaram tocar no código. Alteraram símbolos e o impossível aconteceu. Assim nasceu a <span className="italic text-amber-200">magia</span> — a arte de manipular a sintaxe do mundo.
             </TimelineCard>
 
-            {/* CARD 3: A QUEDA */}
             <TimelineCard 
               side="left"
               icon={<AlertTriangle className="w-5 h-5 text-red-400" />}
@@ -170,7 +164,6 @@ export function HeroContent() {
               O equilíbrio foi quebrado. Cada nova linha reescrita trazia instabilidade. <span className="text-red-200 italic">"O céu rachou, cidades desmoronaram. A Grande Queda não foi obra das máquinas, mas da arrogância de seus criadores."</span>
             </TimelineCard>
 
-            {/* CARD 4: O RENASCIMENTO */}
             <TimelineCard 
               side="right"
               icon={<BookOpen className="w-5 h-5 text-emerald-400" />}
@@ -179,24 +172,19 @@ export function HeroContent() {
             >
               O mundo antigo morreu. O que restou foi um planeta onde a magia é apenas o eco de algoritmos esquecidos. Aqui, nós recuperamos esse conhecimento. Você aprenderá a <span className="font-bold text-emerald-200">lógica</span> que rege o universo.
             </TimelineCard>
-
           </div>
 
-          {/* Ornamento Final */}
           <div className="flex justify-center mt-20 relative z-10">
              <div className="w-3 h-3 rotate-45 border-2 border-amber-500/50 bg-black"></div>
           </div>
-
         </div>
       </section>
-
     </div>
   );
 }
 
 // Componente de Card
 function TimelineCard({ side, icon, title, children, color }: { side: 'left' | 'right', icon: any, title: string, children: any, color: string }) {
-  
   const borderColors: any = {
     cyan: "border-cyan-500/30 group-hover:border-cyan-400/60",
     amber: "border-amber-500/30 group-hover:border-amber-400/60",
@@ -213,21 +201,12 @@ function TimelineCard({ side, icon, title, children, color }: { side: 'left' | '
 
   return (
     <div className={`flex flex-col md:flex-row items-center justify-between mb-12 w-full group ${side === 'right' ? 'md:flex-row-reverse' : ''}`}>
-      
-      {/* Lado Vazio */}
       <div className="hidden md:block w-5/12"></div>
-
-      {/* Ícone Central */}
       <div className={`absolute left-4 md:left-1/2 -translate-x-1/2 flex items-center justify-center w-10 h-10 rounded-full border-2 z-20 transition-transform duration-300 group-hover:scale-110 ${iconColors[color]}`}>
         {icon}
       </div>
-
-      {/* O Card de Conteúdo */}
       <div className={`w-full md:w-5/12 pl-12 md:pl-0 ${side === 'left' ? 'md:pr-10' : 'md:pl-10'} relative`}>
-        
-        {/* Linha conectora */}
         <div className={`hidden md:block absolute top-5 h-[2px] w-10 bg-white/10 ${side === 'left' ? 'right-0' : 'left-0'}`}></div>
-
         <div className={`p-6 rounded-xl border bg-[#0a0a0f]/80 backdrop-blur-md shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col min-h-[220px] justify-center ${borderColors[color]}`}>
           <h3 className="text-xl font-bold text-white mb-3 font-serif tracking-wide border-b border-white/5 pb-2">
             {title}
@@ -237,7 +216,6 @@ function TimelineCard({ side, icon, title, children, color }: { side: 'left' | '
           </p>
         </div>
       </div>
-
     </div>
   );
 }

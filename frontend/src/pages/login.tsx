@@ -6,8 +6,7 @@ import EyeIcon from "@mui/icons-material/Visibility";
 import EyeClosedIcon from "@mui/icons-material/VisibilityOff";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import * as Icons from '@mui/icons-material';
-
+import Navbar from "../components/Navbar"; // IMPORTAR NAVBAR
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -16,7 +15,6 @@ export default function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
-  // Login realizado via email e senha
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
 
@@ -55,28 +53,30 @@ export default function LoginPage() {
 
       if (data.status === "ok") {
         alert("Login realizado com sucesso!");
-        await signIn(email); // 👈 salva email + nível 1 no contexto
-        navigate("/");       // 👈 volta pra Home
+        await signIn(email);
+        navigate("/");
       } else {
         alert(data.mensagem || "Erro ao fazer login.");
       }
     } catch (error) {
       console.error("Erro ao ler JSON:", error);
-      alert("Resposta inválida do servidor.");
+      alert("Resposta inv�lida do servidor.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <>
-    <div className="login-page">
+    <div className="login-page relative"> {/* ADICIONADO RELATIVE */}
+      
+      <Navbar /> {/* ADICIONADO NAVBAR */}
+
       <h1 className="text-white text-5xl !mb-4">Kodarys</h1>
       <div className="flex flex-col gap-8 bg-slate-900/80 !p-16 border border-slate-950/30 rounded-2xl ">
         <div className="flex flex-col gap-3 !text-center">
           <div className="flex flex-col gap-1">
-            <div className="flex flex-row gap-1">
-              <a href="/"><Icons.Home className="text-white hover:text-blue-500 transition-colors"/></a>
+            <div className="flex flex-row gap-1 justify-center">
+              {/* Removido icone Home antigo */}
               <h3 className="text-white font-inherit tracking-wide text-xl font-bold">
                 Entre com a sua conta Kodarys
               </h3>
@@ -123,7 +123,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-          {/* Botão */}
+          {/* Bot�o */}
         {loading ? (
           <button
             className="bg-blue-500 text-white !p-4 rounded-lg cursor-pointer"
@@ -151,6 +151,5 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
-    </>
   );
 }

@@ -7,6 +7,7 @@ import EyeIcon from "@mui/icons-material/Visibility";
 import EyeClosedIcon from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
 import * as Icons from "@mui/icons-material"
+import Navbar from "../components/Navbar"; // <--- Importando a Navbar
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -89,12 +90,13 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="login-page">
+    <div className="login-page relative"> {/* Adicionado relative aqui */}
+      <Navbar /> {/* Adicionado Navbar aqui */}
+
       <h1 className="text-white text-5xl">Kodarys</h1>
       <div className="flex flex-col gap-8 bg-slate-900/80 !p-16 border border-slate-950/30 rounded-2xl ">
         <div className="flex flex-col gap-3 !text-center">
           <div className="flex flex-rows justify-center gap-3">
-            <a href="/"><Icons.Home className="text-white hover:text-blue-500 transition-colors"/></a>
             <h3 className="text-white font-inherit tracking-wide text-xl font-bold">
               CRIE A SUA LENDA
             </h3>
