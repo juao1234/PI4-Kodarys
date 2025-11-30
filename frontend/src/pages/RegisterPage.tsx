@@ -20,7 +20,7 @@ export default function RegisterPage() {
   const [senha, setSenha] = useState("");
   const [confirmSenha, setConfirmSenha] = useState("");
 
-  const { signIn } = useAuth(); // por enquanto não uso aqui, só no login
+  const { signIn } = useAuth(); // Utilizado apenas no login
   const navigate = useNavigate();
 
   // Função chamada ao clicar em "Cadastrar"

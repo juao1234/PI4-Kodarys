@@ -29,7 +29,7 @@ public class HttpToTcpServer {
         // Cadastro de usuário
         server.createContext("/api/usuario", HttpToTcpServer::handleUsuario);
 
-        // 🔐 Login de usuário (usa o MESMO handler, só muda o path)
+        // Login de usuário (usa o MESMO handler, só muda o path)
         server.createContext("/api/usuario/login", HttpToTcpServer::handleUsuario);
 
         // Eventos (dialogo, tentativa, etc) - JSON com "tipo"
@@ -67,7 +67,7 @@ public class HttpToTcpServer {
             String body = new String(is.readAllBytes(), StandardCharsets.UTF_8);
             System.out.println("HTTP Recebido (do React): " + body);
 
-            // 🔁 Repassa esse JSON para o servidor TCP
+            // Repassa esse JSON para o servidor TCP
             String respostaDoServidorTcp = enviarParaServidorTCP(body);
 
             // Devolve pro React exatamente o JSON que o TCP retornar

@@ -82,7 +82,7 @@ public class MainServer {
                     JsonObject root = gson.fromJson(json, JsonObject.class);
 
                     // ======================================================================
-                    // FIX 1: CAPTURAR "action": "buscarProgresso" (Vindo do HttpToTcpServer)
+                    // Captura a ação "buscarProgresso" vinda do HttpToTcpServer
                     // ======================================================================
                     if (root != null && root.has("action") && "buscarProgresso".equalsIgnoreCase(root.get("action").getAsString())) {
                         String userId = root.get("userId").getAsString();
@@ -121,13 +121,13 @@ public class MainServer {
 
                                 if (doc == null) {
                                     out.println("{\"status\":\"erro\",\"mensagem\":\"Usuário não encontrado.\"}");
-                                    System.out.println("Login falhou: usuário não encontrado (" + usuario.getEmail() + ")");
+                                    System.out.println("Login falhou: usuario nao encontrado (" + usuario.getEmail() + ")");
                                 } else {
                                     String senhaHash = doc.getString("senhaHash");
 
                                     if (senhaHash == null) {
                                         out.println("{\"status\":\"erro\",\"mensagem\":\"Usuário sem senha cadastrada.\"}");
-                                        System.out.println("Login falhou: usuário sem senha hash (" + usuario.getEmail() + ")");
+                                        System.out.println("Login falhou: usuario sem senha hash (" + usuario.getEmail() + ")");
                                     } else if (BCrypt.checkpw(usuario.getSenha(), senhaHash)) {
                                         out.println("{\"status\":\"ok\",\"mensagem\":\"Login realizado com sucesso.\"}");
                                         System.out.println("Login OK para: " + usuario.getEmail());
@@ -144,7 +144,7 @@ public class MainServer {
 
                         } else {
                             out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes ou inválidos.\"}");
-                            System.out.println("Requisição inválida para cadastro/login: " + json);
+                            System.out.println("Requisicao invalida para cadastro/login: " + json);
                         }
                     }
                 } catch (JsonSyntaxException e) {
@@ -152,7 +152,7 @@ public class MainServer {
                     System.out.println("Erro de sintaxe no JSON: " + e.getMessage());
                 }
 
-                System.out.println("Conexão encerrada.\n");
+                System.out.println("Conexao encerrada.\n");
 
             } catch (IOException e) {
                 if (running) {
@@ -220,29 +220,29 @@ public class MainServer {
 
         if (uri == null || uri.isEmpty()) {
             uri = "mongodb://localhost:27017";
-            System.out.println("MONGODB_URI não definido no .env. Usando padrão: " + uri);
+            System.out.println("MONGODB_URI nao definido no .env. Usando padrao: " + uri);
         }
 
         if (dbName == null || dbName.isEmpty()) {
             dbName = "Kodarys";
-            System.out.println("DB_NAME não definido no .env. Usando padrão: " + dbName);
+            System.out.println("DB_NAME nao definido no .env. Usando padrao: " + dbName);
         }
 
         if (collectionName == null || collectionName.isEmpty()) {
             collectionName = "usuarios";
-            System.out.println("MONGO_COLLECTION não definido no .env. Usando padrão: " + collectionName);
+            System.out.println("MONGO_COLLECTION nao definido no .env. Usando padrao: " + collectionName);
         }
 
         String historicoName = dotenv.get("MONGO_COLLECTION_HISTORICO");
         if (historicoName == null || historicoName.isEmpty()) {
             historicoName = "historico_missoes";
-            System.out.println("MONGO_COLLECTION_HISTORICO não definido. Usando padrão: " + historicoName);
+            System.out.println("MONGO_COLLECTION_HISTORICO nao definido. Usando padrao: " + historicoName);
         }
 
         String narrativaName = dotenv.get("MONGO_COLLECTION_NARRATIVA");
         if (narrativaName == null || narrativaName.isEmpty()) {
             narrativaName = "estado_narrativa";
-            System.out.println("MONGO_COLLECTION_NARRATIVA não definido. Usando padrão: " + narrativaName);
+            System.out.println("MONGO_COLLECTION_NARRATIVA nao definido. Usando padrao: " + narrativaName);
         }
 
         mongoClient = MongoClients.create(uri);
@@ -265,7 +265,7 @@ public class MainServer {
                 .append("createdAt", dataFormatada);
 
         usuariosCollection.insertOne(doc);
-        System.out.println("Usuário salvo no MongoDB: " + doc.toJson());
+        System.out.println("Usuario salvo no MongoDB: " + doc.toJson());
     }
 
     // ---------------------- EVENTOS ----------------------
@@ -424,7 +424,7 @@ public class MainServer {
     }
 
     // ======================================================================
-    // FIX 2: OBTER PROGRESSO COM HISTÓRICO DE DIÁLOGOS
+    // Obtém o progresso do usuário incluindo o histórico de diálogos
     // ======================================================================
     private static String obterProgresso(String idUsuario) {
         Document filtro = new Document("id_usuario", idUsuario);
@@ -452,7 +452,6 @@ public class MainServer {
             resp.addProperty("ultima_atualizacao",
                     narrativa.get("ultima_atualizacao") != null ? narrativa.get("ultima_atualizacao").toString() : null);
 
-            // ----- AQUI ESTÁ A CORREÇÃO -----
             // Recupera o array de dialogos_vistos para o frontend restaurar o chat
             if (narrativa.containsKey("dialogos_vistos")) {
                 List<Document> dialogosDocs = (List<Document>) narrativa.get("dialogos_vistos");
@@ -479,10 +478,7 @@ public class MainServer {
         return resp.toString();
     }
 
-    // Os métodos handleClient, salvarProgresso, buscarProgresso e handleRequest
-    // que existiam antes estão aqui para manter compatibilidade, caso algo ainda use
-    // (embora a lógica principal já esteja no loop do start)
-
+    // Métodos mantidos para compatibilidade com implementações anteriores
     private void handleClient(Socket socket) {
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));

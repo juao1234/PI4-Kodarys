@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { Send, Code2, Sparkles, Menu, Play, Terminal, X } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext'; // NOVO: IMPORTADO
+import { useAuth } from '../contexts/AuthContext'; // Importação do contexto de autenticação
 import {
   PERSONAS,
   DEFAULT_MISSION,
@@ -123,7 +123,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 };
 
 export default function LabPage() {
-  // === CORREÇÃO: USAR CONTEXTO DE AUTH ===
+  // Utiliza o contexto de autenticação
   const { user } = useAuth();
   // Se não tiver email, userId fica vazio
   const userId = user?.email;
@@ -205,7 +205,7 @@ export default function LabPage() {
       if (!userId) return; // Não carrega se não tiver user
       
       try {
-        // === CORREÇÃO: Usar 'userId' no parametro da URL
+        // Usa 'userId' no parâmetro da URL
         const res = await fetch(`http://localhost:8080/api/progresso?userId=${encodeURIComponent(userId)}`);
         if (!res.ok) return;
         
@@ -225,7 +225,7 @@ export default function LabPage() {
           setMissionStatus('incomplete');
         }
 
-        // === CORREÇÃO: Restaurar Histórico do Chat ===
+        // Restaura o histórico do chat
         if (data.historico_dialogos && Array.isArray(data.historico_dialogos) && data.historico_dialogos.length > 0) {
           const loadedMsgs: ChatMessage[] = data.historico_dialogos.map((d: any) => ({
             role: d.persona === 'user' ? 'user' : 'model',

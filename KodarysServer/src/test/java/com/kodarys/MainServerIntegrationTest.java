@@ -41,7 +41,7 @@ public class MainServerIntegrationTest {
         try (Socket s = new Socket("localhost", testPort)) {
             // conectado com sucesso -> ok
         } catch (IOException e) {
-            // se falhar aqui, aborta testes
+            // Falha na conexão aborta os testes
             fail("Não foi possível conectar ao servidor na porta de teste " + testPort + ". Erro: " + e.getMessage());
         }
     }

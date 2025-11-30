@@ -47,10 +47,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signIn = async (email: string) => {
     const newUser: User = {
       id: "1",
-      name: email,          // 👈 aparece no lugar do "John Doe"
+      name: email,          // aparece no lugar do "John Doe"
       classe: "Aventureiro",
       email,
-      level: 1,             // 👈 nível 1 fixo por enquanto
+      level: 1,             // nível 1 fixo por enquanto
       avatar: null,
     };
 

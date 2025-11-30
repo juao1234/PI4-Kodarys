@@ -14,7 +14,7 @@ export default function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
-  // agora login é por email + senha
+  // Login realizado via email e senha
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
 

@@ -147,7 +147,7 @@ export const buildSystemPrompt = ({
   allowedConcepts: string;
   onboarding: string;
 }) => {
-  // Texto de sistema que injeta contexto, metodologia e tom a cada requisição de chat.
+  // Prompt do sistema para definir contexto, metodologia e tom do chat.
   return `${ROLEPLAY_PROMPT}
 
 Contexto adicional: Módulo 1 de Python (interpretador, print, strings, variáveis, input, conversão, operadores).

@@ -28,8 +28,8 @@ useEffect(() => {
       setLoading(true);
       const resp = await axios.get(`http://localhost:8080/api/progresso?userId=${encodeURIComponent(user?.email)}`);
       const data = resp.data;
-      // a API /api/progresso retorna um objeto de estado de narrativa,
-      // então aqui esse objeto é convertido em um array com um "curso/missão"
+      // A API /api/progresso retorna um objeto de estado de narrativa,
+      // que é convertido em um array representando o curso/missão atual.
       const cursosConvertidos: CursoComProgresso[] = [
         {
           id_curso: data.missao_atual ?? "missao_desconhecida",
@@ -82,8 +82,8 @@ return (
 
         <button
           onClick={() => {
-            // aqui você navega ou chama outra API para iniciar/continuar
-            // ex: navigate(`/curso/${curso.id_curso}/modulo/${curso.modulo_atual || 1}`)
+            // Navegação ou chamada de API para iniciar/continuar o curso
+            // Exemplo: navigate(`/curso/${curso.id_curso}/modulo/${curso.modulo_atual || 1}`)
           }}
         >
           {curso.st ? "Continuar módulo" : "Iniciar curso"}

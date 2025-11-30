@@ -57,7 +57,7 @@ public class ErrorHandlingTest {
              BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
              PrintWriter out = new PrintWriter(s.getOutputStream(), true)) {
 
-            // espera um pouco e então fecha sem enviar
+            // Aguarda brevemente e encerra sem enviar dados
             TimeUnit.MILLISECONDS.sleep(1200);
             // Dependendo da implementação do servidor, ele pode fechar por timeout e não enviar nada.
             // O teste apenas verifica que a conexão é estabelecida e que o servidor não travou.
