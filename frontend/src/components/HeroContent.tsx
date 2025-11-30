@@ -8,14 +8,50 @@ export function HeroContent() {
   return (
     <div className="w-full flex flex-col relative font-sans text-white">
       
+      {/* CORREÇÃO DA ANIMAÇÃO:
+          - width: 31ch (31 caracteres, o tamanho exato da frase)
+          - steps(31): 31 passos para bater com cada letra
+          - white-space: nowrap: garante que não quebre linha
+      */}
+      <style>{`
+        .typing-effect {
+          display: inline-block;
+          overflow: hidden;
+          border-right: 3px solid rgba(34, 211, 238, 0.8);
+          white-space: nowrap;
+          margin: 0 auto;
+          font-family: 'Fira Code', monospace; /* Fonte monoespaçada é essencial para o cálculo ch funcionar bem */
+          width: 0; /* Começa zerado */
+          animation: 
+            typing 3.5s steps(31, end) forwards,
+            blink-caret .75s step-end infinite;
+        }
+        
+        .typing-wrapper {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+
+        @keyframes typing {
+          from { width: 0 }
+          to { width: 31ch } /* Largura exata da frase */
+        }
+
+        @keyframes blink-caret {
+          from, to { border-color: transparent }
+          50% { border-color: rgba(34, 211, 238, 0.8); }
+        }
+      `}</style>
+
       {/* =====================================================================================
-          FILTRO GLOBAL (Fundo Escuro Uniforme)
+          FILTRO GLOBAL
          ===================================================================================== */}
       <div className="absolute inset-0 bg-[#050508]/80 pointer-events-none z-0" />
 
 
       {/* =====================================================================================
-          SEÇÃO 1: TELA DE TÍTULO (MANTIDA)
+          SEÇÃO 1: TELA DE TÍTULO
          ===================================================================================== */}
       <section className="h-screen w-full flex flex-col items-center justify-center relative overflow-hidden z-10">
         
@@ -46,23 +82,26 @@ export function HeroContent() {
              />
           </div>
 
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2 w-full max-w-4xl">
             <h1 className="text-6xl md:text-8xl lg:text-[10rem] font-black text-white tracking-tighter drop-shadow-2xl font-serif scale-y-90">
               KODARYS
             </h1>
-            <div className="mt-4 h-8 relative">
+            
+            {/* ANIMAÇÃO DE DIGITAÇÃO CORRIGIDA */}
+            <div className="mt-4 h-8 relative w-full flex justify-center">
                 <div className="typing-wrapper">
-                    <code className="font-mono text-cyan-300 text-sm md:text-lg typing-effect drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">
+                    <code className="text-cyan-300 text-sm md:text-xl typing-effect drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">
                         &lt; Programar pode ser mágico /&gt;
                     </code>
                 </div>
             </div>
           </div>
 
+          {/* BOTÃO START */}
           <div className="mt-12">
             <Link 
               to={user ? "/lab" : "/register"}
-              className="inline-flex items-center justify-center gap-4 px-24 py-6 border-2 border-white/40 hover:border-white bg-transparent hover:bg-white hover:text-black transition-all duration-300 ease-in-out shadow-[0_0_20px_rgba(0,0,0,0.5)]"
+              className="inline-flex items-center justify-center gap-4 px-24 py-6 border-2 border-white/40 bg-transparent hover:bg-white hover:text-black hover:border-white shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-colors duration-200"
             >
               <Play className="w-6 h-6 fill-current" />
               <span className="font-bold tracking-[0.4em] text-lg">
@@ -79,7 +118,7 @@ export function HeroContent() {
 
 
       {/* =====================================================================================
-          SEÇÃO 2: A LENDA (TIMELINE ORGANIZADA E SIMÉTRICA)
+          SEÇÃO 2: A LENDA
          ===================================================================================== */}
       <section className="relative w-full flex justify-center px-6 py-32 z-10">
         
@@ -118,7 +157,7 @@ export function HeroContent() {
               title="O Nascimento da Magia"
               color="amber"
             >
-              Mas a ambição não conhece limites. Os sábios ousaram tocar no código. Reescreveram fórmulas e o impossível aconteceu. Assim nasceu a <span className="italic text-amber-200">magia</span> — a arte de manipular a sintaxe do mundo.
+              Mas a ambição não conhece limites. Os sábios ousaram tocar no código. Alteraram símbolos e o impossível aconteceu. Assim nasceu a <span className="italic text-amber-200">magia</span> — a arte de manipular a sintaxe do mundo.
             </TimelineCard>
 
             {/* CARD 3: A QUEDA */}
@@ -128,7 +167,7 @@ export function HeroContent() {
               title="A Grande Queda"
               color="red"
             >
-              O equilíbrio foi quebrado. O céu rachou, cidades desmoronaram. A Grande Queda não foi obra das máquinas, mas um erro fatal de execução causado pela arrogância de seus criadores.
+              O equilíbrio foi quebrado. Cada nova linha reescrita trazia instabilidade. <span className="text-red-200 italic">"O céu rachou, cidades desmoronaram. A Grande Queda não foi obra das máquinas, mas da arrogância de seus criadores."</span>
             </TimelineCard>
 
             {/* CARD 4: O RENASCIMENTO */}
@@ -155,7 +194,7 @@ export function HeroContent() {
   );
 }
 
-// Componente de Card Unificado
+// Componente de Card
 function TimelineCard({ side, icon, title, children, color }: { side: 'left' | 'right', icon: any, title: string, children: any, color: string }) {
   
   const borderColors: any = {
@@ -175,10 +214,10 @@ function TimelineCard({ side, icon, title, children, color }: { side: 'left' | '
   return (
     <div className={`flex flex-col md:flex-row items-center justify-between mb-12 w-full group ${side === 'right' ? 'md:flex-row-reverse' : ''}`}>
       
-      {/* Lado Vazio (para empurrar o card para o lado correto no desktop) */}
+      {/* Lado Vazio */}
       <div className="hidden md:block w-5/12"></div>
 
-      {/* Ícone Central na Linha */}
+      {/* Ícone Central */}
       <div className={`absolute left-4 md:left-1/2 -translate-x-1/2 flex items-center justify-center w-10 h-10 rounded-full border-2 z-20 transition-transform duration-300 group-hover:scale-110 ${iconColors[color]}`}>
         {icon}
       </div>
@@ -186,14 +225,14 @@ function TimelineCard({ side, icon, title, children, color }: { side: 'left' | '
       {/* O Card de Conteúdo */}
       <div className={`w-full md:w-5/12 pl-12 md:pl-0 ${side === 'left' ? 'md:pr-10' : 'md:pl-10'} relative`}>
         
-        {/* Linha conectora (Horizontal) */}
+        {/* Linha conectora */}
         <div className={`hidden md:block absolute top-5 h-[2px] w-10 bg-white/10 ${side === 'left' ? 'right-0' : 'left-0'}`}></div>
 
-        <div className={`p-6 rounded-xl border bg-[#0a0a0f]/80 backdrop-blur-md shadow-lg transition-all duration-300 hover:-translate-y-1 ${borderColors[color]}`}>
+        <div className={`p-6 rounded-xl border bg-[#0a0a0f]/80 backdrop-blur-md shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col min-h-[220px] justify-center ${borderColors[color]}`}>
           <h3 className="text-xl font-bold text-white mb-3 font-serif tracking-wide border-b border-white/5 pb-2">
             {title}
           </h3>
-          <p className="text-slate-300 font-serif text-base leading-relaxed text-justify">
+          <p className="text-slate-300 font-serif text-base leading-relaxed text-left">
             {children}
           </p>
         </div>
