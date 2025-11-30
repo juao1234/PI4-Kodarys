@@ -98,33 +98,28 @@ public class HttpToTcpServer {
 
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
-
-            if ("OPTIONS".equalsIgnoreCase(method)) {
-                exchange.sendResponseHeaders(204, -1);
-                return;
-            }
 
             if (!"GET".equalsIgnoreCase(method)) {
-                exchange.sendResponseHeaders(405, -1);
+                exchange.sendResponseHeaders(405, -1); // Method Not Allowed
                 return;
             }
 
+            // Obtém o userId da query string
             String query = exchange.getRequestURI().getQuery();
-            String idUsuario = extrairQueryParam(query, "id_usuario");
-
-            if (idUsuario == null || idUsuario.isEmpty()) {
-                byte[] respBytes = "{\"status\":\"erro\",\"mensagem\":\"id_usuario obrigatório\"}"
-                        .getBytes(StandardCharsets.UTF_8);
-                exchange.sendResponseHeaders(400, respBytes.length);
-                exchange.getResponseBody().write(respBytes);
-                exchange.getResponseBody().close();
+            if (query == null || !query.contains("userId=")) {
+                exchange.sendResponseHeaders(400, -1); // Bad Request
                 return;
             }
 
-            String payload = "{\"tipo\":\"progresso_get\",\"id_usuario\":\"" + idUsuario + "\"}";
-            String respostaDoServidorTcp = enviarParaServidorTCP(payload);
+            String userId = query.split("userId=")[1];
 
+            // Monta o JSON para enviar ao servidor TCP
+            String requestJson = "{\"action\":\"buscarProgresso\",\"userId\":\"" + userId + "\"}";
+
+            // Envia ao servidor TCP e obtém a resposta
+            String respostaDoServidorTcp = enviarParaServidorTCP(requestJson);
+
+            // Retorna a resposta ao cliente HTTP
             byte[] respBytes = respostaDoServidorTcp.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json; charset=utf-8");
             exchange.sendResponseHeaders(200, respBytes.length);
@@ -132,26 +127,16 @@ public class HttpToTcpServer {
             OutputStream os = exchange.getResponseBody();
             os.write(respBytes);
             os.close();
+
         } catch (Exception e) {
             e.printStackTrace();
-            String erro = "{\"status\":\"erro\",\"mensagem\":\"Erro interno no adaptador HTTP→TCP.\"}";
+            String erro = "{\"status\":\"erro\",\"mensagem\":\"Erro interno ao buscar progresso.\"}";
             byte[] respBytes = erro.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json; charset=utf-8");
             exchange.sendResponseHeaders(500, respBytes.length);
             exchange.getResponseBody().write(respBytes);
             exchange.getResponseBody().close();
         }
-    }
-
-    private static String extrairQueryParam(String query, String key) {
-        if (query == null || query.isEmpty()) return null;
-        String[] pairs = query.split("&");
-        for (String p : pairs) {
-            String[] kv = p.split("=");
-            if (kv.length == 2 && kv[0].equals(key)) {
-                return java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
-            }
-        }
-        return null;
     }
 
     // ---------------------- Fala com o servidor TCP ----------------------

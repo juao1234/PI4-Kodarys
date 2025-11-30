@@ -75,17 +75,27 @@ public class MainServer {
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
                 String json = in.readLine();
+                if (json == null) continue;
                 System.out.println("Recebido: " + json);
 
                 try {
                     JsonObject root = gson.fromJson(json, JsonObject.class);
 
+                    // ======================================================================
+                    // FIX 1: CAPTURAR "action": "buscarProgresso" (Vindo do HttpToTcpServer)
+                    // ======================================================================
+                    if (root != null && root.has("action") && "buscarProgresso".equalsIgnoreCase(root.get("action").getAsString())) {
+                        String userId = root.get("userId").getAsString();
+                        String response = obterProgresso(userId);
+                        out.println(response);
+                    }
                     // ---------- EVENTOS (tem campo "tipo") ----------
-                    if (root != null && root.has("tipo")) {
+                    else if (root != null && root.has("tipo")) {
                         String response = processarEvento(root);
                         out.println(response);
-                    } else {
-                        // ---------- CADASTRO ou LOGIN ----------
+                    } 
+                    // ---------- CADASTRO ou LOGIN ----------
+                    else {
                         Usuario usuario = gson.fromJson(json, Usuario.class);
 
                         if (isCadastro(usuario)) {
@@ -258,7 +268,7 @@ public class MainServer {
         System.out.println("Usuário salvo no MongoDB: " + doc.toJson());
     }
 
-    // ---------------------- EVENTOS (já existiam) ----------------------
+    // ---------------------- EVENTOS ----------------------
 
     private static String processarEvento(JsonObject root) {
         String tipo = root.get("tipo").getAsString();
@@ -413,16 +423,9 @@ public class MainServer {
         return null;
     }
 
-    private static java.util.List<String> jsonArrayToStringList(JsonElement element) {
-        java.util.List<String> list = new java.util.ArrayList<>();
-        if (element == null || !element.isJsonArray()) return list;
-        JsonArray arr = element.getAsJsonArray();
-        for (JsonElement e : arr) {
-            list.add(e.getAsString());
-        }
-        return list;
-    }
-
+    // ======================================================================
+    // FIX 2: OBTER PROGRESSO COM HISTÓRICO DE DIÁLOGOS
+    // ======================================================================
     private static String obterProgresso(String idUsuario) {
         Document filtro = new Document("id_usuario", idUsuario);
         Document narrativa = estadoNarrativaCollection.find(filtro).first();
@@ -448,6 +451,22 @@ public class MainServer {
                 resp.addProperty("modulo_status", narrativa.getString("modulo_status"));
             resp.addProperty("ultima_atualizacao",
                     narrativa.get("ultima_atualizacao") != null ? narrativa.get("ultima_atualizacao").toString() : null);
+
+            // ----- AQUI ESTÁ A CORREÇÃO -----
+            // Recupera o array de dialogos_vistos para o frontend restaurar o chat
+            if (narrativa.containsKey("dialogos_vistos")) {
+                List<Document> dialogosDocs = (List<Document>) narrativa.get("dialogos_vistos");
+                JsonArray dialogosJson = new JsonArray();
+                for (Document d : dialogosDocs) {
+                    JsonObject dio = new JsonObject();
+                    dio.addProperty("texto", d.getString("texto"));
+                    dio.addProperty("persona", d.getString("persona"));
+                    dio.addProperty("timestamp", d.getLong("timestamp"));
+                    dialogosJson.add(dio);
+                }
+                resp.add("historico_dialogos", dialogosJson);
+            }
+            // --------------------------------
         }
 
         if (lastTentativa != null) {
@@ -459,6 +478,10 @@ public class MainServer {
 
         return resp.toString();
     }
+
+    // Os métodos handleClient, salvarProgresso, buscarProgresso e handleRequest
+    // que existiam antes estão aqui para manter compatibilidade, caso algo ainda use
+    // (embora a lógica principal já esteja no loop do start)
 
     private void handleClient(Socket socket) {
         try (
@@ -508,4 +531,60 @@ public class MainServer {
         System.out.println("Conexão encerrada.\n");
     }
 
+    private void salvarProgresso(String userId, String missionId, String stage, String status) {
+        try {
+            Document progresso = new Document("userId", userId)
+                    .append("missionId", missionId)
+                    .append("stage", stage)
+                    .append("status", status)
+                    .append("updatedAt", new Date());
+
+            historicoMissoesCollection.insertOne(progresso);
+            System.out.println("Progresso salvo com sucesso para o usuário: " + userId);
+        } catch (MongoException e) {
+            System.err.println("Erro ao salvar progresso: " + e.getMessage());
+        }
+    }
+
+    private String buscarProgresso(String userId) {
+        try {
+            Document progresso = historicoMissoesCollection.find(Filters.eq("userId", userId))
+                    .sort(Sorts.descending("updatedAt"))
+                    .first();
+
+            if (progresso != null) {
+                return progresso.toJson();
+            } else {
+                return "{}";
+            }
+        } catch (MongoException e) {
+            System.err.println("Erro ao buscar progresso: " + e.getMessage());
+            return "{\"error\": \"Erro ao buscar progresso\"}";
+        }
+    }
+
+    private void handleRequest(String requestJson) {
+        try {
+            Gson gson = new Gson();
+            JsonObject request = gson.fromJson(requestJson, JsonObject.class);
+
+            String action = request.get("action").getAsString();
+            if ("salvarProgresso".equals(action)) {
+                String userId = request.get("userId").getAsString();
+                String missionId = request.get("missionId").getAsString();
+                String stage = request.get("stage").getAsString();
+                String status = request.get("status").getAsString();
+
+                salvarProgresso(userId, missionId, stage, status);
+            } else if ("buscarProgresso".equals(action)) {
+                String userId = request.get("userId").getAsString();
+                String progresso = buscarProgresso(userId);
+                System.out.println("Progresso encontrado: " + progresso);
+            } else {
+                System.out.println("Ação desconhecida: " + action);
+            }
+        } catch (JsonSyntaxException | NullPointerException e) {
+            System.err.println("Erro ao processar requisição: " + e.getMessage());
+        }
+    }
 }

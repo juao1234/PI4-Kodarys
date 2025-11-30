@@ -28,6 +28,12 @@ public class HistoricoMissao {
 
     private String erro;
 
+    @SerializedName("stage")
+    private String stage;
+
+    @SerializedName("status")
+    private String status;
+
     public HistoricoMissao() {}
 
     public String getIdUsuario() { return idUsuario; }
@@ -51,6 +57,12 @@ public class HistoricoMissao {
     public String getErro() { return erro; }
     public void setErro(String erro) { this.erro = erro; }
 
+    public String getStage() { return stage; }
+    public void setStage(String stage) { this.stage = stage; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
     @Override
     public String toString() {
         return "HistoricoMissao{" +
@@ -61,6 +73,8 @@ public class HistoricoMissao {
                 ", codigoSubmetido='" + codigoSubmetido + '\'' +
                 ", output=" + output +
                 ", erro='" + erro + '\'' +
+                ", stage='" + stage + '\'' +
+                ", status='" + status + '\'' +
                 '}';
     }
 }
