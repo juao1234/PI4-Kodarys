@@ -1,7 +1,6 @@
 import { useAuth } from "../contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { ChevronDown, Play, Sparkles, Database, Zap, AlertTriangle, BookOpen } from 'lucide-react';
-import Navbar from "./Navbar"; // IMPORTAR NAVBAR
+import { ChevronDown, Play, Sparkles, Database, Zap, AlertTriangle, BookOpen, LogIn } from 'lucide-react';
 
 export function HeroContent() {
   const { user } = useAuth();
@@ -17,7 +16,7 @@ export function HeroContent() {
           white-space: nowrap;
           margin: 0 auto;
           font-family: 'Fira Code', monospace;
-          width: 0; 
+          width: 0;
           animation: 
             typing 3.5s steps(31, end) forwards,
             blink-caret .75s step-end infinite;
@@ -43,12 +42,42 @@ export function HeroContent() {
       {/* FILTRO GLOBAL */}
       <div className="absolute inset-0 bg-[#050508]/80 pointer-events-none z-0" />
 
-      {/* NAVBAR UNIFICADA */}
-      <Navbar />
-
       {/* SEÇÃO 1: TELA DE TÍTULO */}
       <section className="h-screen w-full flex flex-col items-center justify-center relative overflow-hidden z-10">
         
+        {/* Barra Superior */}
+        <div className="absolute top-0 w-full p-8 flex justify-between items-center z-30">
+          <div className="flex items-center gap-4 group cursor-default relative">
+            <div className="absolute -inset-3 bg-cyan-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <img 
+              src="/android-chrome-192x192.png" 
+              alt="Kodarys Logo" 
+              className="w-10 h-10 md:w-12 md:h-12 object-contain shrink-0 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)] relative z-10" 
+            />
+            <span className="text-white font-serif tracking-[0.3em] text-xs md:text-sm uppercase font-bold drop-shadow-sm relative z-10">
+              Kodarys
+            </span>
+          </div>
+
+          {/* Botão de Login ou Status do Usuário */}
+          <div className="relative z-30">
+            {!user ? (
+              <Link 
+                to="/auth/login"
+                className="flex items-center gap-2 px-6 py-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-md text-white/90 hover:bg-white/10 hover:text-cyan-300 hover:border-cyan-500/50 transition-all duration-300 text-sm font-bold tracking-widest font-serif"
+              >
+                <LogIn className="w-4 h-4" />
+                LOGIN
+              </Link>
+            ) : (
+               <div className="flex items-center gap-2 px-6 py-2 rounded-full border border-purple-500/30 bg-purple-900/20 backdrop-blur-md text-purple-200">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                  <span className="text-xs tracking-widest font-bold uppercase">{user.name}</span>
+               </div>
+            )}
+          </div>
+        </div>
+
         {/* Conteúdo Central */}
         <div className="z-20 flex flex-col items-center text-center gap-8 animate-fade-in-up w-full px-4 mt-[-40px]">
           <div className="relative group">
@@ -94,9 +123,7 @@ export function HeroContent() {
 
       {/* SEÇÃO 2: A LENDA */}
       <section className="relative w-full flex justify-center px-6 py-32 z-10">
-        
         <div className="max-w-6xl w-full relative">
-          
           <div className="text-center mb-32 relative z-10">
             <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full border border-amber-500/30 bg-amber-900/20 text-amber-200 text-xs tracking-[0.2em] font-mono mb-6 backdrop-blur-md">
               <Sparkles className="w-3 h-3" />
@@ -145,20 +172,18 @@ export function HeroContent() {
             >
               O mundo antigo morreu. O que restou foi um planeta onde a magia é apenas o eco de algoritmos esquecidos. Aqui, nós recuperamos esse conhecimento. Você aprenderá a <span className="font-bold text-emerald-200">lógica</span> que rege o universo.
             </TimelineCard>
-
           </div>
 
           <div className="flex justify-center mt-20 relative z-10">
              <div className="w-3 h-3 rotate-45 border-2 border-amber-500/50 bg-black"></div>
           </div>
-
         </div>
       </section>
-
     </div>
   );
 }
 
+// Componente de Card
 function TimelineCard({ side, icon, title, children, color }: { side: 'left' | 'right', icon: any, title: string, children: any, color: string }) {
   const borderColors: any = {
     cyan: "border-cyan-500/30 group-hover:border-cyan-400/60",

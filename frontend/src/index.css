@@ -44,7 +44,7 @@ a {
 }
 
 a:hover {
-  @apply text-blue-300
+  color: #93c5fd; /* Mesmo tom do utilitário text-blue-300 sem depender de @apply */
 }
 
 h1, h2, h3, h4, h5, h6, p, button, input, label {

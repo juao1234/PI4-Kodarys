@@ -481,16 +481,24 @@ public class MainServer {
 
             // Recupera o array de dialogos_vistos para o frontend restaurar o chat
             if (narrativa.containsKey("dialogos_vistos")) {
-                List<Document> dialogosDocs = (List<Document>) narrativa.get("dialogos_vistos");
-                JsonArray dialogosJson = new JsonArray();
-                for (Document d : dialogosDocs) {
-                    JsonObject dio = new JsonObject();
-                    dio.addProperty("texto", d.getString("texto"));
-                    dio.addProperty("persona", d.getString("persona"));
-                    dio.addProperty("timestamp", d.getLong("timestamp"));
-                    dialogosJson.add(dio);
+                Object dialogosRaw = narrativa.get("dialogos_vistos");
+                if (dialogosRaw instanceof List<?>) {
+                    JsonArray dialogosJson = new JsonArray();
+                    for (Object obj : (List<?>) dialogosRaw) {
+                        if (obj instanceof Document) {
+                            Document d = (Document) obj;
+                            JsonObject dio = new JsonObject();
+                            dio.addProperty("texto", d.getString("texto"));
+                            dio.addProperty("persona", d.getString("persona"));
+                            dio.addProperty("timestamp", d.getLong("timestamp"));
+                            dialogosJson.add(dio);
+                        }
+                    }
+                    // Evita inserir campo vazio caso nenhum item válido seja encontrado
+                    if (dialogosJson.size() > 0) {
+                        resp.add("historico_dialogos", dialogosJson);
+                    }
                 }
-                resp.add("historico_dialogos", dialogosJson);
             }
             // --------------------------------
         }
@@ -522,6 +530,7 @@ public class MainServer {
     }
 
     // Métodos mantidos para compatibilidade com implementações anteriores
+    @SuppressWarnings("unused") // Chamado manualmente em cenários de teste ou versões antigas
     private void handleClient(Socket socket) {
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -602,6 +611,7 @@ public class MainServer {
         }
     }
 
+    @SuppressWarnings("unused") // Exposto para futuras integrações via socket
     private void handleRequest(String requestJson) {
         try {
             Gson gson = new Gson();

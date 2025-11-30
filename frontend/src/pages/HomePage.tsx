@@ -23,7 +23,7 @@ export default function HomePage() {
         {moduleStatus === 'concluido' && (
           <div className="absolute top-24 left-0 w-full z-50 flex justify-center px-4">
             <div className="bg-green-600/90 backdrop-blur text-white font-semibold px-6 py-3 rounded-lg shadow-[0_0_20px_rgba(34,197,94,0.5)] border border-green-400">
-              \u2728 M�dulo conclu�do! Progresso salvo no grim�rio.
+              \u2728 Modulo concluido! Progresso salvo no grimório.
             </div>
           </div>
         )}

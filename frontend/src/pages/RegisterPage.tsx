@@ -6,8 +6,7 @@ import EmailIcon from "@mui/icons-material/Email";
 import EyeIcon from "@mui/icons-material/Visibility";
 import EyeClosedIcon from "@mui/icons-material/VisibilityOff";
 import { useNavigate, Link } from "react-router-dom";
-import * as Icons from "@mui/icons-material"
-import Navbar from "../components/Navbar"; // <--- Importando a Navbar
+import Navbar from "../components/Navbar"; 
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
