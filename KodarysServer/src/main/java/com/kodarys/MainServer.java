@@ -212,7 +212,22 @@ public class MainServer {
     // ======================================================
 
     private static void inicializarMongo() {
-        Dotenv dotenv = Dotenv.load();
+        // Tenta carregar .env sem falhar se não existir (ex.: rodando sem arquivo ou em outra pasta)
+        Dotenv dotenv = Dotenv.configure()
+                .ignoreIfMalformed()
+                .ignoreIfMissing()
+                .load();
+
+        // Se não achou nada na pasta atual, tenta a raiz do repo (quando roda dentro de KodarysServer/)
+        if (dotenv.get("MONGODB_URI") == null &&
+                dotenv.get("DB_NAME") == null &&
+                dotenv.get("MONGO_COLLECTION") == null) {
+            dotenv = Dotenv.configure()
+                    .directory("../")
+                    .ignoreIfMalformed()
+                    .ignoreIfMissing()
+                    .load();
+        }
 
         String uri = dotenv.get("MONGODB_URI");
         String dbName = dotenv.get("DB_NAME");
