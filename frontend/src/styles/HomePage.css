@@ -1,0 +1,30 @@
+.project-description-section {
+  padding: 80px 20px;
+  text-align: center;
+  opacity: 0; 
+  transform: translateY(30px); 
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out; 
+  background-color: #f8f9fa; 
+}
+
+.project-description-section .container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.project-description-section h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.project-description-section p {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #555;
+}
+
+.project-description-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
