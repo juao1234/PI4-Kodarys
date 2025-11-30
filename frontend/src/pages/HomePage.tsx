@@ -65,11 +65,11 @@ export default function HomePage() {
       
       <section 
         ref={descriptionRef}
-        className={`project-description-section ${isDescriptionVisible ? 'is-visible' : ''}`}
+        className={`project-description-section bg-indigo-950 ${isDescriptionVisible ? 'is-visible' : ''}`}
       >
         <div className="container">
-          <h2>O que é o Kodarys?</h2>
-          <p>
+          <h2 className="text-amber-400">O que é o Kodarys?</h2>
+          <p className="text-amber-300">
             O projeto Kodarys é uma plataforma inovadora de ensino de programação
             que transforma o aprendizado em uma experiência divertida e imersiva,
             combinando elementos de gamificação, visual novel e RPG. Pensada
@@ -85,10 +85,6 @@ export default function HomePage() {
           </p>
         </div>
       </section>
-
-      <main id="cursos">
-        {user && <Cursos />}
-      </main>
     </>
   );
 }
