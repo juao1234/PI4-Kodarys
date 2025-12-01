@@ -63,22 +63,22 @@ export default function ProgressPage() {
     fetchProgress();
   }, [user?.email, navigate]);
 
-  // --- C�LCULO DIN�MICO DE PORCENTAGEM ---
+  // --- CÁLCULO DINÂMICO DE PORCENTAGEM ---
   const completion = useMemo(() => {
     if (!progress) return 0;
 
-    // 1. Se o backend diz que o m�dulo acabou, � 100%
+    // 1. Se o backend diz que o módulo acabou, é 100%
     if (progress.status_missao === "CONCLUIDA" || progress.modulo_status === "CONCLUIDO") {
       return 100;
     }
 
-    // 2. Identifica qual a miss�o atual
+    // 2. Identifica qual a missão atual
     const currentMission = progress.missao_atual || progress.ultima_missao || "M01_INTRO";
 
-    // 3. Acha a posi��o dela na lista (0 a 4)
+    // 3. Acha a posição dela na lista (0 a 4)
     const index = MISSION_ORDER.indexOf(currentMission);
 
-    // 4. Se n�o achar (index -1), assume 0%. Se achar, calcula proporcionalmente.
+    // 4. Se não achar (index -1), assume 0%. Se achar, calcula proporcionalmente.
     // Ex: M01 (index 0) -> 0%
     // Ex: M03 (index 2) -> (2 / 5) * 100 = 40%
     if (index === -1) return 0;
@@ -89,9 +89,9 @@ export default function ProgressPage() {
   const statusLabel = useMemo(() => {
     if (!progress) return "Carregando...";
     if (progress.status_missao === "CONCLUIDA" || progress.modulo_status === "CONCLUIDO")
-      return "M�dulo Conclu�do";
+      return "Módulo Concluído";
     if (progress.status_missao === "EM_ANDAMENTO") return "Em Andamento";
-    return "N�o Iniciado";
+    return "Não Iniciado";
   }, [progress]);
 
   const rawMissionName = progress?.missao_atual || progress?.ultima_missao || "M01_INTRO";
@@ -134,7 +134,7 @@ export default function ProgressPage() {
               Olá, {displayName}
             </h1>
             <p className="text-slate-400 max-w-xl font-light text-lg tracking-wide">
-              O grimório reagiu á sua presença. <br/>Sua jornada continua exatamente de onde parou.
+              O grimório reagiu à sua presença. <br/>Sua jornada continua exatamente de onde parou.
             </p>
           </div>
 
@@ -162,7 +162,7 @@ export default function ProgressPage() {
                   
                   <div className="w-full max-w-md space-y-2">
                     <div className="flex justify-between text-xs text-slate-400 uppercase tracking-wider font-bold">
-                      <span>Sincroniza��o</span>
+                      <span>Sincronização</span>
                       <span>{completion}%</span>
                     </div>
                     <div className="h-2.5 w-full bg-white/10 rounded-full overflow-hidden border border-white/5">
@@ -191,7 +191,7 @@ export default function ProgressPage() {
                     {isModuleFinished ? <Lock className="w-5 h-5" /> : <Play className="w-6 h-6 fill-current relative z-10" />}
                     
                     <span className="relative z-10 font-serif">
-                      {isModuleFinished ? "EM BREVE NOVAS MISS�ES" : "CONTINUAR JORNADA"}
+                      {isModuleFinished ? "EM BREVE NOVAS MISSÕES" : "CONTINUAR JORNADA"}
                     </span>
                   </button>
                 </div>

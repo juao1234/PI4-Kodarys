@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { Send, Code2, Sparkles, Play, Terminal, X, Home } from 'lucide-react';
+import { Send, Code2, Sparkles, Play, Terminal, X, Home, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -34,19 +34,20 @@ const NavbarLocal: React.FC = () => {
         <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm border border-white/10 group-hover:bg-purple-500/20 transition-colors">
           <Sparkles className="w-5 h-5 text-purple-300" />
         </div>
-        <a href='/' className="font-bold text-lg tracking-wide text-white/90 drop-shadow-md">
+        {/* Ao clicar no logo, também leva para o perfil se estiver logado */}
+        <Link to='/profile' className="font-bold text-lg tracking-wide text-white/90 drop-shadow-md">
           KODARYS
-        </a>
+        </Link>
       </div>
 
-      {/* Lado Direito: Botão Voltar */}
+      {/* Lado Direito: Botão Voltar para Área Logada */}
       <div className="pointer-events-auto">
         <Link 
-          to="/" 
+          to="/profile" // <--- ALTERADO DE "/" PARA "/profile"
           className="flex items-center gap-2 !px-4 !py-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white border border-transparent hover:border-white/10"
         >
-          <span className="text-sm font-medium">Voltar</span>
-          <Home className="w-5 h-5" />
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Voltar para o Grimório</span>
         </Link>
       </div>
     </nav>
