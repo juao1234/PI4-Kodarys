@@ -122,12 +122,12 @@ export default function ProgressPage() {
       
       <Navbar />
 
-      <main className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-6 py-20">
+      <main className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center !px-6 py-20">
         
         <div className="flex flex-col items-center text-center gap-8 animate-fade-in-up w-full max-w-5xl">
           
-          <div className="flex flex-col items-center gap-3 mb-4">
-            <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs uppercase tracking-[0.3em] border border-cyan-500/30 px-4 py-1.5 rounded-full bg-cyan-950/30 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 !mb-4">
+            <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs uppercase tracking-[0.3em] border border-cyan-500/30 !px-4 !py-1.5 rounded-full bg-cyan-950/30 backdrop-blur-sm">
               <Star className="w-3 h-3" /> Área do Aprendiz
             </div>
             <h1 className="text-5xl md:text-7xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-500 drop-shadow-2xl">
@@ -140,16 +140,16 @@ export default function ProgressPage() {
 
           <div className="w-full flex flex-col gap-4">
             
-            <div className={`w-full relative overflow-hidden rounded-3xl p-1 p-[1px] ${isModuleFinished ? 'bg-gradient-to-r from-yellow-500/50 via-orange-500/50 to-yellow-500/50' : 'bg-gradient-to-r from-cyan-500/30 to-purple-500/30'}`}>
+            <div className={`w-full relative overflow-hidden rounded-3xl !p-1 !p-[1px] ${isModuleFinished ? 'bg-gradient-to-r from-yellow-500/50 via-orange-500/50 to-yellow-500/50' : 'bg-gradient-to-r from-cyan-500/30 to-purple-500/30'}`}>
               <div className="absolute inset-0 bg-black/40 backdrop-blur-xl rounded-3xl" />
               
-              <div className="relative bg-[#0a0a0f]/90 rounded-[23px] p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="relative bg-[#0a0a0f]/90 rounded-[23px] !p-8 md:!p-10 flex flex-col md:flex-row items-center justify-between gap-8">
                 
                 <div className={`absolute top-0 right-0 w-96 h-96 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-40 ${isModuleFinished ? 'bg-amber-500' : 'bg-cyan-500'}`}></div>
 
                 <div className="flex flex-col items-center md:items-start gap-5 text-center md:text-left z-10 flex-1">
                   <div className="flex items-center gap-4">
-                    <div className={`p-4 rounded-2xl border ${isModuleFinished ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300'}`}>
+                    <div className={`!p-4 rounded-2xl border ${isModuleFinished ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300'}`}>
                       {isModuleFinished ? <Trophy className="w-8 h-8" /> : <Sparkles className="w-8 h-8" />}
                     </div>
                     <div>
@@ -178,7 +178,7 @@ export default function ProgressPage() {
                   <button
                     onClick={() => !isModuleFinished && navigate("/lab")}
                     disabled={isModuleFinished}
-                    className={`relative group/btn flex items-center justify-center gap-4 px-12 py-5 rounded-xl font-bold text-lg tracking-widest shadow-xl border transition-all duration-300 overflow-hidden
+                    className={`relative group/btn flex items-center justify-center gap-4 !px-12 !py-5 rounded-xl font-bold text-lg tracking-widest shadow-xl border transition-all duration-300 overflow-hidden
                       ${isModuleFinished 
                         ? 'bg-gradient-to-b from-slate-800 to-slate-900 border-slate-700/50 text-slate-500 cursor-not-allowed shadow-none grayscale opacity-80' 
                         : 'bg-gradient-to-r from-cyan-600 to-blue-700 text-white border-cyan-400/30 hover:shadow-[0_0_40px_-10px_rgba(8,145,178,0.6)] hover:-translate-y-1'
@@ -224,10 +224,10 @@ export default function ProgressPage() {
 function StatCard({ icon, label, value, delay }: { icon: React.ReactNode, label: string, value: string, delay: string }) {
   return (
     <div 
-      className="bg-[#0a0a0f]/60 border border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 hover:bg-white/5 hover:border-white/20 transition-all duration-300 backdrop-blur-md group shadow-lg"
+      className="bg-[#0a0a0f]/60 border border-white/10 rounded-2xl !p-6 flex flex-col items-center justify-center gap-3 hover:bg-white/5 hover:border-white/20 transition-all duration-300 backdrop-blur-md group shadow-lg"
       style={{ animationDelay: delay }}
     >
-      <div className="p-3 rounded-full bg-white/5 border border-white/5 group-hover:scale-110 group-hover:bg-white/10 transition-transform duration-300">
+      <div className="!p-3 rounded-full bg-white/5 border border-white/5 group-hover:scale-110 group-hover:bg-white/10 transition-transform duration-300">
         {icon}
       </div>
       <div className="flex flex-col items-center">
