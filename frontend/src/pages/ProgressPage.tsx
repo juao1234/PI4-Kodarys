@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Play, Sparkles, Clock, BookOpen, Lock, Trophy, Star } from "lucide-react";
 import Navbar from "../components/Navbar";
@@ -23,7 +23,7 @@ const MISSION_NAMES: Record<string, string> = {
 };
 
 export default function ProgressPage() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [progress, setProgress] = useState<ProgressPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,11 +54,13 @@ export default function ProgressPage() {
     fetchProgress();
   }, [user?.email, navigate]);
 
+  // CORREÇÃO AQUI: Alterado de 35 para 0 no valor padrão
   const completion = useMemo(() => {
     if (!progress) return 0;
     const finished =
       progress.status_missao === "CONCLUIDA" || progress.modulo_status === "CONCLUIDO";
-    const base = progress.porcentagem ?? (finished ? 100 : 35);
+    // Se não tiver porcentagem vindo do banco, e não estiver finalizado, assume 0%
+    const base = progress.porcentagem ?? (finished ? 100 : 0); 
     return Math.min(100, Math.max(0, base));
   }, [progress]);
 
@@ -81,25 +83,11 @@ export default function ProgressPage() {
 
   const isModuleFinished = progress?.modulo_status === "CONCLUIDO";
 
-  // Formata o nome para exibição (remove email)
   const displayName = user?.name ? (user.name.includes('@') ? user.name.split('@')[0] : user.name) : "Viajante";
-
-  if (loading && !progress) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <Navbar />
-        <div className="flex items-center gap-3 text-slate-300">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-          Sincronizando seu progresso...
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="relative w-full min-h-screen bg-black overflow-hidden font-sans text-white selection:bg-cyan-500/30">
       
-      {/* Background */}
       <div
         className="absolute inset-0 z-0 opacity-40"
         style={{
@@ -116,7 +104,6 @@ export default function ProgressPage() {
         
         <div className="flex flex-col items-center text-center gap-8 animate-fade-in-up w-full max-w-5xl">
           
-          {/* Header */}
           <div className="flex flex-col items-center gap-3 mb-4">
             <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs uppercase tracking-[0.3em] border border-cyan-500/30 px-4 py-1.5 rounded-full bg-cyan-950/30 backdrop-blur-sm">
               <Star className="w-3 h-3" /> Área do Aprendiz
@@ -129,16 +116,13 @@ export default function ProgressPage() {
             </p>
           </div>
 
-          {/* CONTAINER DE ALINHAMENTO */}
           <div className="w-full flex flex-col gap-4">
             
-            {/* CARD PRINCIPAL */}
             <div className={`w-full relative overflow-hidden rounded-3xl p-1 p-[1px] ${isModuleFinished ? 'bg-gradient-to-r from-yellow-500/50 via-orange-500/50 to-yellow-500/50' : 'bg-gradient-to-r from-cyan-500/30 to-purple-500/30'}`}>
               <div className="absolute inset-0 bg-black/40 backdrop-blur-xl rounded-3xl" />
               
               <div className="relative bg-[#0a0a0f]/90 rounded-[23px] p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8">
                 
-                {/* Glow de fundo */}
                 <div className={`absolute top-0 right-0 w-96 h-96 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-40 ${isModuleFinished ? 'bg-amber-500' : 'bg-cyan-500'}`}></div>
 
                 <div className="flex flex-col items-center md:items-start gap-5 text-center md:text-left z-10 flex-1">
@@ -154,7 +138,6 @@ export default function ProgressPage() {
                     </div>
                   </div>
                   
-                  {/* Barra de Progresso */}
                   <div className="w-full max-w-md space-y-2">
                     <div className="flex justify-between text-xs text-slate-400 uppercase tracking-wider font-bold">
                       <span>Sincronização</span>
@@ -169,7 +152,6 @@ export default function ProgressPage() {
                   </div>
                 </div>
 
-                {/* Botão de Ação */}
                 <div className="flex flex-col gap-4 w-full md:w-auto z-10">
                   <button
                     onClick={() => !isModuleFinished && navigate("/lab")}
@@ -195,7 +177,6 @@ export default function ProgressPage() {
               </div>
             </div>
 
-            {/* --- STATS GRID (Alinhado com o Card Principal) --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
               <StatCard 
                 icon={<Clock className="w-5 h-5 text-amber-300" />}
@@ -218,7 +199,7 @@ export default function ProgressPage() {
   );
 }
 
-function StatCard({ icon, label, value, delay }: { icon: ReactNode, label: string, value: string, delay: string }) {
+function StatCard({ icon, label, value, delay }: { icon: React.ReactNode, label: string, value: string, delay: string }) {
   return (
     <div 
       className="bg-[#0a0a0f]/60 border border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 hover:bg-white/5 hover:border-white/20 transition-all duration-300 backdrop-blur-md group shadow-lg"
