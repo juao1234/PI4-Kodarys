@@ -14,7 +14,7 @@ type ProgressPayload = {
   porcentagem?: number;
 };
 
-// Ordem exata das missões para o cálculo
+// Ordem exata das missões para o cálculo e progresso
 const MISSION_ORDER = [
   "M01_INTRO",
   "M02_VARIAVEIS",
