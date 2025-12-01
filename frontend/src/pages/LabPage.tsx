@@ -43,7 +43,7 @@ const NavbarLocal: React.FC = () => {
       {/* Lado Direito: Botão Voltar para Área Logada */}
       <div className="pointer-events-auto">
         <Link 
-          to="/profile" // <--- ALTERADO DE "/" PARA "/profile"
+          to="/progresso" 
           className="flex items-center gap-2 !px-4 !py-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white border border-transparent hover:border-white/10"
         >
           <ArrowLeft className="w-5 h-5" />
