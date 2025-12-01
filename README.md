@@ -1,4 +1,4 @@
-# PI4-Kodarys - Plataforma Gamificada de Programação 🎮
+﻿# PI4-Kodarys - Plataforma Gamificada de Programação 🎮
 
 Este repositório contém o código da **plataforma Kodarys**, um RPG educacional projetado para ensinar conceitos de programação de forma lúdica e imersiva.
 
@@ -292,7 +292,7 @@ com um JSON assim:
   "nome": "Roston",
   "email": "Roston@gmail.com",
   "idade": 24,
-  "senha": "roston123"
+  "senha": "hashcode"
 }
 
 
@@ -305,14 +305,6 @@ valida os campos
 gera o hash da senha
 
 insere no MongoDB na coleção usuarios
-
-responde com algo como:
-
-{
-  "status": "ok",
-  "mensagem": "JSON válido e salvo no MongoDB."
-}
-
 
 O frontend mostra uma mensagem e pode redirecionar para a tela de login.
 
