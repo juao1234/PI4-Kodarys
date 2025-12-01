@@ -36,10 +36,6 @@ export default function HomePage() {
         
         <HeroContent />
       </div>
-      
-      <main id="cursos" className="relative z-10 bg-[#0f1016]">
-        {user && <Cursos />}
-      </main>
     </>
   );
 }
