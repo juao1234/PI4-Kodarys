@@ -47,7 +47,7 @@ const NavbarLocal: React.FC = () => {
           className="flex items-center gap-2 !px-4 !py-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white border border-transparent hover:border-white/10"
         >
           <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm font-medium">Voltar para o Grimório</span>
+          <span className="text-sm font-medium">Voltar</span>
         </Link>
       </div>
     </nav>
