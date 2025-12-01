@@ -46,7 +46,7 @@ export function HeroContent() {
       <section className="h-screen w-full flex flex-col items-center justify-center relative overflow-hidden z-10">
         
         {/* Barra Superior */}
-        <div className="absolute top-0 w-full p-8 flex justify-between items-center z-30">
+        <div className="absolute top-0 w-full !p-8 flex justify-between items-center z-30">
           <div className="flex items-center gap-4 group cursor-default relative">
             <div className="absolute -inset-3 bg-cyan-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <img 
@@ -64,13 +64,13 @@ export function HeroContent() {
             {!user ? (
               <Link 
                 to="/auth/login"
-                className="flex items-center gap-2 px-6 py-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-md text-white/90 hover:bg-white/10 hover:text-cyan-300 hover:border-cyan-500/50 transition-all duration-300 text-sm font-bold tracking-widest font-serif"
+                className="flex items-center gap-2 !px-6 !py-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-md text-white/90 hover:bg-white/10 hover:text-cyan-300 hover:border-cyan-500/50 transition-all duration-300 text-sm font-bold tracking-widest font-serif"
               >
                 <LogIn className="w-4 h-4" />
                 LOGIN
               </Link>
             ) : (
-               <div className="flex items-center gap-2 px-6 py-2 rounded-full border border-purple-500/30 bg-purple-900/20 backdrop-blur-md text-purple-200">
+               <div className="flex items-center gap-2 !px-6 !py-2 rounded-full border border-purple-500/30 bg-purple-900/20 backdrop-blur-md text-purple-200">
                   <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
                   <span className="text-xs tracking-widest font-bold uppercase">{user.name}</span>
                </div>
@@ -79,7 +79,7 @@ export function HeroContent() {
         </div>
 
         {/* Conteúdo Central */}
-        <div className="z-20 flex flex-col items-center text-center gap-8 animate-fade-in-up w-full px-4 mt-[-40px]">
+        <div className="z-20 flex flex-col items-center text-center gap-8 animate-fade-in-up w-full !px-4 !mt-[-40px]">
           <div className="relative group">
              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-cyan-500/20 rounded-full blur-[60px]"></div>
              <img 
@@ -94,7 +94,7 @@ export function HeroContent() {
               KODARYS
             </h1>
             
-            <div className="mt-4 h-8 relative w-full flex justify-center">
+            <div className="!mt-4 !h-8 relative w-full flex justify-center">
                 <div className="typing-wrapper">
                     <code className="text-cyan-300 text-sm md:text-xl typing-effect drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">
                         &lt; Programar pode ser mágico /&gt;
@@ -103,10 +103,10 @@ export function HeroContent() {
             </div>
           </div>
 
-          <div className="mt-12">
+          <div className="!mt-12">
             <Link 
               to={user ? "/lab" : "/register"}
-              className="inline-flex items-center justify-center gap-4 px-24 py-6 border-2 border-white/40 bg-transparent hover:bg-white hover:text-black hover:border-white shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-colors duration-200"
+              className="inline-flex items-center justify-center gap-4 !px-24 !py-6 border-2 border-white/40 bg-transparent hover:bg-white hover:text-black hover:border-white shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-colors duration-200"
             >
               <Play className="w-6 h-6 fill-current" />
               <span className="font-bold tracking-[0.4em] text-lg">
@@ -122,10 +122,10 @@ export function HeroContent() {
       </section>
 
       {/* SEÇÃO 2: A LENDA */}
-      <section className="relative w-full flex justify-center px-6 py-32 z-10">
+      <section className="relative w-full flex justify-center !px-6 py-32 z-10">
         <div className="max-w-6xl w-full relative">
-          <div className="text-center mb-32 relative z-10">
-            <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full border border-amber-500/30 bg-amber-900/20 text-amber-200 text-xs tracking-[0.2em] font-mono mb-6 backdrop-blur-md">
+          <div className="text-center !mb-32 relative z-10">
+            <div className="inline-flex items-center gap-2 !px-4 !py-1 rounded-full border border-amber-500/30 bg-amber-900/20 text-amber-200 text-xs tracking-[0.2em] font-mono mb-6 backdrop-blur-md">
               <Sparkles className="w-3 h-3" />
               ARQUIVO_PERDIDO.LOG
             </div>
@@ -200,15 +200,15 @@ function TimelineCard({ side, icon, title, children, color }: { side: 'left' | '
   };
 
   return (
-    <div className={`flex flex-col md:flex-row items-center justify-between mb-12 w-full group ${side === 'right' ? 'md:flex-row-reverse' : ''}`}>
+    <div className={`flex flex-col md:flex-row items-center justify-between !mb-12 w-full group ${side === 'right' ? 'md:flex-row-reverse' : ''}`}>
       <div className="hidden md:block w-5/12"></div>
       <div className={`absolute left-4 md:left-1/2 -translate-x-1/2 flex items-center justify-center w-10 h-10 rounded-full border-2 z-20 transition-transform duration-300 group-hover:scale-110 ${iconColors[color]}`}>
         {icon}
       </div>
       <div className={`w-full md:w-5/12 pl-12 md:pl-0 ${side === 'left' ? 'md:pr-10' : 'md:pl-10'} relative`}>
-        <div className={`hidden md:block absolute top-5 h-[2px] w-10 bg-white/10 ${side === 'left' ? 'right-0' : 'left-0'}`}></div>
-        <div className={`p-6 rounded-xl border bg-[#0a0a0f]/80 backdrop-blur-md shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col min-h-[220px] justify-center ${borderColors[color]}`}>
-          <h3 className="text-xl font-bold text-white mb-3 font-serif tracking-wide border-b border-white/5 pb-2">
+        <div className={`hidden md:block absolute top-5 h-[2px] !w-10 bg-white/10 ${side === 'left' ? 'right-0' : 'left-0'}`}></div>
+        <div className={`!p-6 rounded-xl border bg-[#0a0a0f]/80 backdrop-blur-md shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col min-h-[220px] justify-center ${borderColors[color]}`}>
+          <h3 className="text-xl font-bold text-white !mb-3 font-serif tracking-wide border-b border-white/5 !pb-2">
             {title}
           </h3>
           <p className="text-slate-300 font-serif text-base leading-relaxed text-left">

@@ -1,17 +1,8 @@
 import { useEffect, useState } from "react";
 import { HeroContent } from "../components/HeroContent";
-import Cursos from "../components/Cursos";
-import { useAuth } from "../contexts/AuthContext";
 
 export default function HomePage() {
   const [moduleStatus, setModuleStatus] = useState<string | null>(null);
-  const { user, signOut } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      void signOut();
-    }
-  }, [user, signOut]);
 
   useEffect(() => {
     const status = sessionStorage.getItem("kodarys-module-status");
@@ -33,7 +24,6 @@ export default function HomePage() {
             </div>
           </div>
         )}
-        
         <HeroContent />
       </div>
     </>
