@@ -31,11 +31,11 @@ const NavbarLocal: React.FC = () => {
     <nav className="absolute top-0 left-0 w-full z-50 !px-6 !py-4 flex justify-between items-center pointer-events-none">
       {/* Lado Esquerdo: Logo */}
       <div className="flex items-center gap-2 pointer-events-auto cursor-pointer group">
-        <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm border border-white/10 group-hover:bg-purple-500/20 transition-colors">
+        <div className="!p-2 bg-white/10 rounded-full backdrop-blur-sm border border-white/10 group-hover:bg-purple-500/20 transition-colors">
           <Sparkles className="w-5 h-5 text-purple-300" />
         </div>
         {/* Ao clicar no logo, também leva para o perfil se estiver logado */}
-        <Link to='/profile' className="font-bold text-lg tracking-wide text-white/90 drop-shadow-md">
+        <Link to='/' className="font-bold text-lg tracking-wide text-white/90 drop-shadow-md">
           KODARYS
         </Link>
       </div>
