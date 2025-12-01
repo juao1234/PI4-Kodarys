@@ -14,7 +14,7 @@ type ProgressPayload = {
   porcentagem?: number;
 };
 
-// Ordem exata das miss�es para o c�lculo
+// Ordem exata das missões para o cálculo
 const MISSION_ORDER = [
   "M01_INTRO",
   "M02_VARIAVEIS",
@@ -24,18 +24,18 @@ const MISSION_ORDER = [
 ];
 
 const MISSION_NAMES: Record<string, string> = {
-  "M01_INTRO": "Cap�tulo 1: O Despertar da Sintaxe",
-  "M02_VARIAVEIS": "Cap�tulo 2: O Segredo das Vari�veis",
-  "M03_INPUT": "Cap�tulo 3: O Or�culo de Entrada",
-  "M04_OPERADORES": "Cap�tulo 4: A Alquimia dos Operadores",
-  "M05_FINAL": "Desafio Final: A Prova��o do Mago",
+  "M01_INTRO": "Capítulo 1: O Despertar da Sintaxe",
+  "M02_VARIAVEIS": "Capítulo 2: O Segredo das Variáveis",
+  "M03_INPUT": "Capítulo 3: O Oráculo de Entrada",
+  "M04_OPERADORES": "Capítulo 4: A Alquimia dos Operadores",
+  "M05_FINAL": "Desafio Final: A Provação do Mago",
 };
 
 export default function ProgressPage() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [progress, setProgress] = useState<ProgressPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading,setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.email) {
@@ -128,13 +128,13 @@ export default function ProgressPage() {
           
           <div className="flex flex-col items-center gap-3 mb-4">
             <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs uppercase tracking-[0.3em] border border-cyan-500/30 px-4 py-1.5 rounded-full bg-cyan-950/30 backdrop-blur-sm">
-              <Star className="w-3 h-3" /> �rea do Aprendiz
+              <Star className="w-3 h-3" /> Área do Aprendiz
             </div>
             <h1 className="text-5xl md:text-7xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-500 drop-shadow-2xl">
-              Ol�, {displayName}
+              Olá, {displayName}
             </h1>
             <p className="text-slate-400 max-w-xl font-light text-lg tracking-wide">
-              O grim�rio reagiu � sua presen�a. <br/>Sua jornada continua exatamente de onde parou.
+              O grimório reagiu á sua presença. <br/>Sua jornada continua exatamente de onde parou.
             </p>
           </div>
 
@@ -202,13 +202,13 @@ export default function ProgressPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
               <StatCard 
                 icon={<Clock className="w-5 h-5 text-amber-300" />}
-                label="�ltimo Acesso"
+                label="Último Acesso"
                 value={lastUpdate}
                 delay="200ms"
               />
               <StatCard 
                 icon={<BookOpen className="w-5 h-5 text-emerald-300" />}
-                label="Status do M�dulo"
+                label="Status do Módulo"
                 value={progress?.modulo_status === 'CONCLUIDO' ? 'Finalizado' : 'Em Progresso'}
                 delay="300ms"
               />
