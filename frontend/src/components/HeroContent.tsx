@@ -1,6 +1,7 @@
 import { useAuth } from "../contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { ChevronDown, Play, Sparkles, Database, Zap, AlertTriangle, BookOpen, LogIn } from 'lucide-react';
+import * as Icons from "@mui/icons-material"
 
 export function HeroContent() {
   const { user } = useAuth();
@@ -103,7 +104,7 @@ export function HeroContent() {
             </div>
           </div>
 
-          <div className="!mt-12">
+          <div className="!mt-12 flex gap-3">
             <Link 
               to={user ? "/lab" : "/register"}
               className="inline-flex items-center justify-center gap-4 !px-24 !py-6 border-2 border-white/40 bg-transparent hover:bg-white hover:text-black hover:border-white shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-colors duration-200"
@@ -113,6 +114,12 @@ export function HeroContent() {
                 {user ? "CONTINUAR" : "INICIAR"}
               </span>
             </Link>
+            { user ? (
+              <Link to="/progresso" className="inline-flex items-center justify-center gap-4 !px-24 !py-6 border-2 border-white/40 bg-transparent hover:bg-white hover:text-black hover:border-white shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-colors duration-200">
+                <Icons.ShowChart/>
+                <span className="font-bold tracking-[0.4em] text-lg">PROGRESSO</span>
+              </Link>
+            ) : null }
           </div>
         </div>
 
@@ -125,7 +132,7 @@ export function HeroContent() {
       <section className="relative w-full flex justify-center !px-6 py-32 z-10">
         <div className="max-w-6xl w-full relative">
           <div className="text-center !mb-32 relative z-10">
-            <div className="inline-flex items-center gap-2 !px-4 !py-1 rounded-full border border-amber-500/30 bg-amber-900/20 text-amber-200 text-xs tracking-[0.2em] font-mono mb-6 backdrop-blur-md">
+            <div className="inline-flex items-center gap-2 !px-4 !py-1 rounded-full border border-amber-500/30 bg-amber-900/20 text-amber-200 text-xs tracking-[0.2em] font-mono !mb-6 backdrop-blur-md">
               <Sparkles className="w-3 h-3" />
               ARQUIVO_PERDIDO.LOG
             </div>
