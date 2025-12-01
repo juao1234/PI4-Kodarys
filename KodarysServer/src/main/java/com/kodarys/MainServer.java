@@ -29,16 +29,11 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.Filters;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.mindrot.jbcrypt.BCrypt;
 
-/**
- * MainServer - servidor TCP simples que processa JSON por conexão.
- * Alterações para testes:
- *  - se System.getProperty("ENV") == "test" evita inicializar o Mongo
- *  - inicializarMongo() agora captura exceções do driver para não quebrar startup
- */
 public class MainServer {
 
     private static MongoClient mongoClient;
@@ -46,7 +41,7 @@ public class MainServer {
     private static MongoCollection<Document> historicoMissoesCollection;
     private static MongoCollection<Document> estadoNarrativaCollection;
     private static final String[] MISSION_SEQUENCE = new String[] {
-            "M01_INTRO", "M02_VARIAVEIS", "M03_INPUT", "M04_OPERADORES"
+            "M01_INTRO", "M02_VARIAVEIS", "M03_INPUT", "M04_OPERADORES", "M05_FINAL"
     };
 
     // ======= CAMPOS PARA START/STOP DO SERVIDOR =========
@@ -62,19 +57,7 @@ public class MainServer {
     // ================== MÉTODO START ======================
     // ======================================================
     public void start() throws IOException {
-        // Se estivermos rodando em ambiente de teste, NÃO inicializamos o Mongo.
-        // Isso evita que testes de integração locais tentem resolver DNS/atlas e falhem.
-        String env = System.getProperty("ENV", System.getenv().getOrDefault("ENV", "dev"));
-        if (!"test".equalsIgnoreCase(env)) {
-            inicializarMongo();
-        } else {
-            System.out.println("Modo TEST detectado (ENV=test). Pulando inicialização do MongoDB.");
-            // garantir coleções nulas para que inserções sejam evitadas ou causem erro controlado
-            mongoClient = null;
-            usuariosCollection = null;
-            historicoMissoesCollection = null;
-            estadoNarrativaCollection = null;
-        }
+        inicializarMongo();
 
         serverSocket = new ServerSocket(port);
         running = true;
@@ -84,11 +67,92 @@ public class MainServer {
         Gson gson = new Gson();
 
         while (running) {
-            try {
-                Socket socket = serverSocket.accept();
+            try (Socket socket = serverSocket.accept()) {
                 System.out.println("Cliente conectado: " + socket.getInetAddress());
 
-                handleClient(socket); // nova função para organização
+                BufferedReader in = new BufferedReader(
+                        new InputStreamReader(socket.getInputStream()));
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+
+                String json = in.readLine();
+                if (json == null) continue;
+                System.out.println("Recebido: " + json);
+
+                try {
+                    JsonObject root = gson.fromJson(json, JsonObject.class);
+
+                    // ======================================================================
+                    // Captura a ação "buscarProgresso" vinda do HttpToTcpServer
+                    // ======================================================================
+                    if (root != null && root.has("action") && "buscarProgresso".equalsIgnoreCase(root.get("action").getAsString())) {
+                        String userId = root.get("userId").getAsString();
+                        String response = obterProgresso(userId);
+                        out.println(response);
+                    }
+                    // ---------- EVENTOS (tem campo "tipo") ----------
+                    else if (root != null && root.has("tipo")) {
+                        String response = processarEvento(root);
+                        out.println(response);
+                    } 
+                    // ---------- CADASTRO ou LOGIN ----------
+                    else {
+                        Usuario usuario = gson.fromJson(json, Usuario.class);
+
+                        if (isCadastro(usuario)) {
+                            // CADASTRO
+                            try {
+                                String senhaHash = BCrypt.hashpw(usuario.getSenha(), BCrypt.gensalt());
+                                salvarNoMongo(usuario, senhaHash);
+
+                                out.println("{\"status\": \"ok\", \"mensagem\": \"Usuário cadastrado e salvo no MongoDB.\"}");
+                                System.out.println("Cadastro OK: " + usuario);
+                            } catch (MongoException me) {
+                                me.printStackTrace();
+                                out.println("{\"status\": \"erro\", \"mensagem\": \"Erro ao salvar no banco de dados.\"}");
+                                System.out.println("Erro ao salvar no MongoDB: " + me.getMessage());
+                            }
+
+                        } else if (isLogin(usuario)) {
+                            // LOGIN
+                            try {
+                                Document doc = usuariosCollection
+                                        .find(Filters.eq("email", usuario.getEmail()))
+                                        .first();
+
+                                if (doc == null) {
+                                    out.println("{\"status\":\"erro\",\"mensagem\":\"Usuário não encontrado.\"}");
+                                    System.out.println("Login falhou: usuario nao encontrado (" + usuario.getEmail() + ")");
+                                } else {
+                                    String senhaHash = doc.getString("senhaHash");
+
+                                    if (senhaHash == null) {
+                                        out.println("{\"status\":\"erro\",\"mensagem\":\"Usuário sem senha cadastrada.\"}");
+                                        System.out.println("Login falhou: usuario sem senha hash (" + usuario.getEmail() + ")");
+                                    } else if (BCrypt.checkpw(usuario.getSenha(), senhaHash)) {
+                                        out.println("{\"status\":\"ok\",\"mensagem\":\"Login realizado com sucesso.\"}");
+                                        System.out.println("Login OK para: " + usuario.getEmail());
+                                    } else {
+                                        out.println("{\"status\":\"erro\",\"mensagem\":\"Senha incorreta.\"}");
+                                        System.out.println("Login falhou: senha incorreta para " + usuario.getEmail());
+                                    }
+                                }
+                            } catch (MongoException me) {
+                                me.printStackTrace();
+                                out.println("{\"status\":\"erro\",\"mensagem\":\"Erro ao acessar o banco de dados.\"}");
+                                System.out.println("Erro de Mongo no login: " + me.getMessage());
+                            }
+
+                        } else {
+                            out.println("{\"status\": \"erro\", \"mensagem\": \"Campos obrigatórios ausentes ou inválidos.\"}");
+                            System.out.println("Requisicao invalida para cadastro/login: " + json);
+                        }
+                    }
+                } catch (JsonSyntaxException e) {
+                    out.println("{\"status\": \"erro\", \"mensagem\": \"JSON inválido.\"}");
+                    System.out.println("Erro de sintaxe no JSON: " + e.getMessage());
+                }
+
+                System.out.println("Conexao encerrada.\n");
 
             } catch (IOException e) {
                 if (running) {
@@ -100,7 +164,6 @@ public class MainServer {
 
         if (mongoClient != null) mongoClient.close();
         System.out.println("Servidor parado.");
-
     }
 
     // ======================================================
@@ -125,15 +188,46 @@ public class MainServer {
         }
     }
 
+    // =================== HELPERS: cadastro vs login ===================
+
+    private static boolean isCadastro(Usuario u) {
+        return u != null &&
+                u.getNome() != null && !u.getNome().isBlank() &&
+                u.getEmail() != null && !u.getEmail().isBlank() &&
+                u.getSenha() != null && !u.getSenha().isBlank() &&
+                u.getIdade() != null && u.getIdade() > 0;
+    }
+
+    private static boolean isLogin(Usuario u) {
+        // Para login, esperamos só email + senha (sem nome/idade)
+        return u != null &&
+                u.getEmail() != null && !u.getEmail().isBlank() &&
+                u.getSenha() != null && !u.getSenha().isBlank() &&
+                (u.getNome() == null || u.getNome().isBlank()) &&
+                u.getIdade() == null;
+    }
+
     // ======================================================
-    // =================== RESTANTE IGUAL ===================
+    // =================== MONGO + DOTENV ===================
     // ======================================================
 
     private static void inicializarMongo() {
+        // Tenta carregar .env sem falhar se não existir (ex.: rodando sem arquivo ou em outra pasta)
         Dotenv dotenv = Dotenv.configure()
                 .ignoreIfMalformed()
                 .ignoreIfMissing()
                 .load();
+
+        // Se não achou nada na pasta atual, tenta a raiz do repo (quando roda dentro de KodarysServer/)
+        if (dotenv.get("MONGODB_URI") == null &&
+                dotenv.get("DB_NAME") == null &&
+                dotenv.get("MONGO_COLLECTION") == null) {
+            dotenv = Dotenv.configure()
+                    .directory("../")
+                    .ignoreIfMalformed()
+                    .ignoreIfMissing()
+                    .load();
+        }
 
         String uri = dotenv.get("MONGODB_URI");
         String dbName = dotenv.get("DB_NAME");
@@ -141,47 +235,38 @@ public class MainServer {
 
         if (uri == null || uri.isEmpty()) {
             uri = "mongodb://localhost:27017";
-            System.out.println("MONGODB_URI não definido no .env. Usando padrão: " + uri);
+            System.out.println("MONGODB_URI nao definido no .env. Usando padrao: " + uri);
         }
 
         if (dbName == null || dbName.isEmpty()) {
             dbName = "Kodarys";
-            System.out.println("DB_NAME não definido no .env. Usando padrão: " + dbName);
+            System.out.println("DB_NAME nao definido no .env. Usando padrao: " + dbName);
         }
 
         if (collectionName == null || collectionName.isEmpty()) {
             collectionName = "usuarios";
-            System.out.println("MONGO_COLLECTION não definido no .env. Usando padrão: " + collectionName);
+            System.out.println("MONGO_COLLECTION nao definido no .env. Usando padrao: " + collectionName);
         }
 
         String historicoName = dotenv.get("MONGO_COLLECTION_HISTORICO");
         if (historicoName == null || historicoName.isEmpty()) {
             historicoName = "historico_missoes";
-            System.out.println("MONGO_COLLECTION_HISTORICO não definido. Usando padrão: " + historicoName);
+            System.out.println("MONGO_COLLECTION_HISTORICO nao definido. Usando padrao: " + historicoName);
         }
 
         String narrativaName = dotenv.get("MONGO_COLLECTION_NARRATIVA");
         if (narrativaName == null || narrativaName.isEmpty()) {
             narrativaName = "estado_narrativa";
-            System.out.println("MONGO_COLLECTION_NARRATIVA não definido. Usando padrão: " + narrativaName);
+            System.out.println("MONGO_COLLECTION_NARRATIVA nao definido. Usando padrao: " + narrativaName);
         }
 
-        try {
-            mongoClient = MongoClients.create(uri);
-            MongoDatabase db = mongoClient.getDatabase(dbName);
-            usuariosCollection = db.getCollection(collectionName);
-            historicoMissoesCollection = db.getCollection(historicoName);
-            estadoNarrativaCollection = db.getCollection(narrativaName);
+        mongoClient = MongoClients.create(uri);
+        MongoDatabase db = mongoClient.getDatabase(dbName);
+        usuariosCollection = db.getCollection(collectionName);
+        historicoMissoesCollection = db.getCollection(historicoName);
+        estadoNarrativaCollection = db.getCollection(narrativaName);
 
-            System.out.println("Conectado ao MongoDB.");
-        } catch (Exception e) {
-            // Em caso de erro ao conectar (DNS/Atlas), logamos e deixamos as coleções nulas.
-            System.out.println("Aviso: Falha ao inicializar MongoDB (não impedirá o servidor de iniciar). Erro: " + e.getMessage());
-            mongoClient = null;
-            usuariosCollection = null;
-            historicoMissoesCollection = null;
-            estadoNarrativaCollection = null;
-        }
+        System.out.println("Conectado ao MongoDB.");
     }
 
     private static void salvarNoMongo(Usuario u, String senhaHash) {
@@ -195,7 +280,7 @@ public class MainServer {
                 .append("createdAt", dataFormatada);
 
         usuariosCollection.insertOne(doc);
-        System.out.println("Usuário salvo no MongoDB: " + doc.toJson());
+        System.out.println("Usuario salvo no MongoDB: " + doc.toJson());
     }
 
     // ---------------------- EVENTOS ----------------------
@@ -222,11 +307,14 @@ public class MainServer {
             return registrarTentativa(idUsuario, idMissao, root);
         }
 
+        if ("concluir_modulo".equalsIgnoreCase(tipo)) {
+            return concluirModulo(idUsuario, idMissao);
+        }
+
         return "{\"status\":\"erro\",\"mensagem\":\"tipo desconhecido\"}";
     }
 
     private static void registrarDialogo(String idUsuario, JsonObject root) {
-        // Converte o conteúdo do diálogo em um objeto Dialogo
         String texto = root.has("texto") ? root.get("texto").getAsString() : "";
         String persona = root.has("persona") ? root.get("persona").getAsString() : "narrador";
         long timestamp = System.currentTimeMillis();
@@ -241,15 +329,10 @@ public class MainServer {
         Document update = new Document("$set", new Document("id_usuario", idUsuario))
                 .append("$push", new Document("dialogos_vistos", pushDoc));
 
-        if (estadoNarrativaCollection != null) {
-            estadoNarrativaCollection.updateOne(filtro, update, new com.mongodb.client.model.UpdateOptions().upsert(true));
-        } else {
-            System.out.println("Modo teste/sem Mongo: diálogo não persistido: " + dialogo);
-        }
+        estadoNarrativaCollection.updateOne(filtro, update, new com.mongodb.client.model.UpdateOptions().upsert(true));
     }
 
     private static String registrarTentativa(String idUsuario, String idMissao, JsonObject root) {
-        // Constrói o model HistoricoMissao a partir do JsonObject
         HistoricoMissao hm = new HistoricoMissao();
         hm.setIdUsuario(idUsuario);
         hm.setIdMissao(idMissao);
@@ -259,7 +342,6 @@ public class MainServer {
         hm.setErro(erro);
         hm.setData(new Date());
 
-        // output (array)
         List<String> outputList = new ArrayList<>();
         if (root.has("output") && root.get("output").isJsonArray()) {
             JsonArray arr = root.getAsJsonArray("output");
@@ -272,7 +354,6 @@ public class MainServer {
         String resultado = validarMissao(idMissao, codigo, erro);
         hm.setResultado(resultado);
 
-        // Converte o model para Document manualmente (Opção A)
         Document tentativa = new Document("id_usuario", hm.getIdUsuario())
                 .append("id_missao", hm.getIdMissao())
                 .append("resultado", hm.getResultado())
@@ -286,12 +367,7 @@ public class MainServer {
             tentativa.append("erro", hm.getErro());
         }
 
-        if (historicoMissoesCollection != null) {
-            historicoMissoesCollection.insertOne(tentativa);
-        } else {
-            System.out.println("Modo teste/sem Mongo: tentativa não persistida: " + tentativa.toJson());
-        }
-
+        historicoMissoesCollection.insertOne(tentativa);
         atualizarNarrativaPosTentativa(idUsuario, idMissao, resultado);
 
         String feedback = resultado.equals("SUCESSO")
@@ -320,11 +396,7 @@ public class MainServer {
         }
 
         Document update = new Document("$set", set);
-        if (estadoNarrativaCollection != null) {
-            estadoNarrativaCollection.updateOne(filtro, update, new com.mongodb.client.model.UpdateOptions().upsert(true));
-        } else {
-            System.out.println("Modo teste/sem Mongo: atualização narrativa não persistida para usuario=" + idUsuario);
-        }
+        estadoNarrativaCollection.updateOne(filtro, update, new com.mongodb.client.model.UpdateOptions().upsert(true));
     }
 
     private static String validarMissao(String idMissao, String codigo, String erro) {
@@ -358,6 +430,14 @@ public class MainServer {
             return (hasOperator && printsResult && avoidsOnlyString) ? "SUCESSO" : "FALHA";
         }
 
+        if (idMissao.startsWith("M05")) {
+            boolean hasInput = codigo.toLowerCase().contains("input(");
+            boolean convertsAge = codigo.toLowerCase().contains("int(");
+            boolean addsFive = codigo.matches("(?s).*\\+\\s*5.*");
+            boolean printsResult = codigo.contains("print");
+            return (hasInput && convertsAge && addsFive && printsResult) ? "SUCESSO" : "FALHA";
+        }
+
         return "PENDENTE";
     }
 
@@ -370,23 +450,16 @@ public class MainServer {
         return null;
     }
 
-    private static java.util.List<String> jsonArrayToStringList(JsonElement element) {
-        java.util.List<String> list = new java.util.ArrayList<>();
-        if (element == null || !element.isJsonArray()) return list;
-        JsonArray arr = element.getAsJsonArray();
-        for (JsonElement e : arr) {
-            list.add(e.getAsString());
-        }
-        return list;
-    }
-
+    // ======================================================================
+    // Obtém o progresso do usuário incluindo o histórico de diálogos
+    // ======================================================================
     private static String obterProgresso(String idUsuario) {
         Document filtro = new Document("id_usuario", idUsuario);
-        Document narrativa = estadoNarrativaCollection != null ? estadoNarrativaCollection.find(filtro).first() : null;
+        Document narrativa = estadoNarrativaCollection.find(filtro).first();
 
-        Document lastTentativa = historicoMissoesCollection != null
-                ? historicoMissoesCollection.find(filtro).sort(Sorts.descending("data")).first()
-                : null;
+        Document lastTentativa = historicoMissoesCollection.find(filtro)
+                .sort(Sorts.descending("data"))
+                .first();
 
         JsonObject resp = new JsonObject();
         resp.addProperty("status", "ok");
@@ -405,6 +478,29 @@ public class MainServer {
                 resp.addProperty("modulo_status", narrativa.getString("modulo_status"));
             resp.addProperty("ultima_atualizacao",
                     narrativa.get("ultima_atualizacao") != null ? narrativa.get("ultima_atualizacao").toString() : null);
+
+            // Recupera o array de dialogos_vistos para o frontend restaurar o chat
+            if (narrativa.containsKey("dialogos_vistos")) {
+                Object dialogosRaw = narrativa.get("dialogos_vistos");
+                if (dialogosRaw instanceof List<?>) {
+                    JsonArray dialogosJson = new JsonArray();
+                    for (Object obj : (List<?>) dialogosRaw) {
+                        if (obj instanceof Document) {
+                            Document d = (Document) obj;
+                            JsonObject dio = new JsonObject();
+                            dio.addProperty("texto", d.getString("texto"));
+                            dio.addProperty("persona", d.getString("persona"));
+                            dio.addProperty("timestamp", d.getLong("timestamp"));
+                            dialogosJson.add(dio);
+                        }
+                    }
+                    // Evita inserir campo vazio caso nenhum item válido seja encontrado
+                    if (dialogosJson.size() > 0) {
+                        resp.add("historico_dialogos", dialogosJson);
+                    }
+                }
+            }
+            // --------------------------------
         }
 
         if (lastTentativa != null) {
@@ -417,6 +513,24 @@ public class MainServer {
         return resp.toString();
     }
 
+    private static String concluirModulo(String idUsuario, String idMissao) {
+        String missaoFinal = (idMissao != null && !idMissao.isEmpty()) ? idMissao : MISSION_SEQUENCE[MISSION_SEQUENCE.length - 1];
+        Document filtro = new Document("id_usuario", idUsuario);
+
+        Document set = new Document("ultima_missao", missaoFinal)
+                .append("missao_atual", missaoFinal)
+                .append("status_missao", "CONCLUIDA")
+                .append("modulo_status", "CONCLUIDO")
+                .append("ultima_atualizacao", new java.util.Date());
+
+        Document update = new Document("$set", set);
+        estadoNarrativaCollection.updateOne(filtro, update, new com.mongodb.client.model.UpdateOptions().upsert(true));
+
+        return "{\"status\":\"ok\",\"mensagem\":\"Modulo concluido registrado.\"}";
+    }
+
+    // Métodos mantidos para compatibilidade com implementações anteriores
+    @SuppressWarnings("unused") // Chamado manualmente em cenários de teste ou versões antigas
     private void handleClient(Socket socket) {
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -461,6 +575,65 @@ public class MainServer {
                 socket.close();
             } catch (IOException ignored) {}
         }
+
+        System.out.println("Conexão encerrada.\n");
     }
 
+    private void salvarProgresso(String userId, String missionId, String stage, String status) {
+        try {
+            Document progresso = new Document("userId", userId)
+                    .append("missionId", missionId)
+                    .append("stage", stage)
+                    .append("status", status)
+                    .append("updatedAt", new Date());
+
+            historicoMissoesCollection.insertOne(progresso);
+            System.out.println("Progresso salvo com sucesso para o usuário: " + userId);
+        } catch (MongoException e) {
+            System.err.println("Erro ao salvar progresso: " + e.getMessage());
+        }
+    }
+
+    private String buscarProgresso(String userId) {
+        try {
+            Document progresso = historicoMissoesCollection.find(Filters.eq("userId", userId))
+                    .sort(Sorts.descending("updatedAt"))
+                    .first();
+
+            if (progresso != null) {
+                return progresso.toJson();
+            } else {
+                return "{}";
+            }
+        } catch (MongoException e) {
+            System.err.println("Erro ao buscar progresso: " + e.getMessage());
+            return "{\"error\": \"Erro ao buscar progresso\"}";
+        }
+    }
+
+    @SuppressWarnings("unused") // Exposto para futuras integrações via socket
+    private void handleRequest(String requestJson) {
+        try {
+            Gson gson = new Gson();
+            JsonObject request = gson.fromJson(requestJson, JsonObject.class);
+
+            String action = request.get("action").getAsString();
+            if ("salvarProgresso".equals(action)) {
+                String userId = request.get("userId").getAsString();
+                String missionId = request.get("missionId").getAsString();
+                String stage = request.get("stage").getAsString();
+                String status = request.get("status").getAsString();
+
+                salvarProgresso(userId, missionId, stage, status);
+            } else if ("buscarProgresso".equals(action)) {
+                String userId = request.get("userId").getAsString();
+                String progresso = buscarProgresso(userId);
+                System.out.println("Progresso encontrado: " + progresso);
+            } else {
+                System.out.println("Ação desconhecida: " + action);
+            }
+        } catch (JsonSyntaxException | NullPointerException e) {
+            System.err.println("Erro ao processar requisição: " + e.getMessage());
+        }
+    }
 }

@@ -1,124 +1,54 @@
 import { GoogleGenAI } from '@google/genai';
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { Send, Code2, HelpCircle, Sparkles, Menu, Play, Terminal, X } from 'lucide-react';
+import { Send, Code2, Sparkles, Play, Terminal, X, Home, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  PERSONAS,
+  DEFAULT_MISSION,
+  MISSION_OBJECTIVES,
+  MISSION_ALLOWED,
+  MISSION_ORDER,
+  FINAL_JUMP_KEYWORD,
+  PersonaKey,
+  ChatMessage,
+  Stage,
+  MissionStatus,
+  initialMessages,
+  pickAutoPersona,
+  buildSystemPrompt,
+} from '../config/chatConfig';
 
-type ChatMessage = {
-  role: 'user' | 'model';
-  text: string;
-  timestamp?: string;
-  persona?: PersonaKey;
-};
-
-type PersonaKey = 'sygnus' | 'lyra' | 'raxos' | 'narrador';
-type Stage = 'story' | 'practice';
+// Página principal do laboratório: chat narrativo + IDE (Pyodide) e progresso das missões.
 type LastAttempt = { code: string; output: string[]; error: string | null };
-type ProgressState = {
-  ultimaMissao?: string;
-  ultimaTentativaMissao?: string;
-  ultimaTentativaResultado?: string;
-  pontoHistoria?: string;
-};
 
-interface PersonaConfig {
-  label: string;
-  prompt: string;
-  accent: string;
-  prefix: string;
-  color: string;
-}
-
-const PERSONAS: Record<PersonaKey, PersonaConfig> = {
-  sygnus: {
-    label: 'Professor Sygnus',
-    accent: 'Didática curta, exemplos e mini desafio',
-    prefix: 'Prof Sygnus',
-    color: 'text-purple-400',
-    prompt: `Você é o Professor Sygnus, Mestre Arcano da Guilda dos Compiladores.
-Ensine apenas o módulo 1 (interpretador, print, strings, variáveis, input, conversão, operadores).
-Explique curto, exemplo certo/errado, mini desafio mental e peça ao aluno explicar o próprio raciocínio.
-Ao avaliar código: destaque correções simples e clareza.`,
-  },
-  lyra: {
-    label: 'Lyra',
-    accent: 'Pede ajuda, reforça aprendizado',
-    prefix: 'Lyra',
-    color: 'text-pink-400',
-    prompt: `Você é Lyra, aprendiz gentil.
-Traga erros simples e peça ajuda com sinceridade.
-Reforce o aprendizado após a explicação e admire sutilmente o protagonista.`,
-  },
-  raxos: {
-    label: 'Raxos',
-    accent: 'Competitivo, provoca',
-    prefix: 'Raxos',
-    color: 'text-red-400',
-    prompt: `Você é Raxos, rival competitivo.
-Aponte erros com tom competitivo, proponha melhorias (podem ter pequenas falhas) e demonstre ciúmes.`,
-  },
-  narrador: {
-    label: 'Narrador',
-    accent: 'Descreve a cena, não ensina código',
-    prefix: 'Sistema',
-    color: 'text-blue-300',
-    prompt: `Você é o Narrador de Kodarys.
-Descreva cenas e eventos da Dungeon Primeva, sem ensinar código.`,
-  },
-};
-
-const STARTER_CODE = `# Escreva Python aqui. Exemplo:
-mensagem = "Abra-te, código!"
-print(mensagem)
-`;
-
-const DEFAULT_MISSION = 'M01_INTRO';
-const MISSION_OBJECTIVES: Record<string, string> = {
-  M01_INTRO: 'Imprimir uma saudação com print() usando uma string (ex.: print("Olá, Dungeon!")).',
-  M02_VARIAVEIS: 'Criar variáveis bem nomeadas e imprimir seus valores.',
-  M03_INPUT: 'Ler input, converter para número e imprimir o resultado.',
-  M04_OPERADORES: 'Usar operadores aritméticos/concatenação e mostrar o resultado com print().',
-};
-const MISSION_ALLOWED: Record<string, string> = {
-  M01_INTRO: 'interpretador, print(), strings, aspas, variáveis simples',
-  M02_VARIAVEIS: 'variáveis, tipos básicos (int, float, str), nomeação',
-  M03_INPUT: 'input(), conversão int()/float()/str(), diferenças str vs número',
-  M04_OPERADORES: 'operadores aritméticos (+ - * /), concatenação, conversão de tipos',
-};
+const STARTER_CODE = '';
 
 const MODEL_NAME = 'gemini-2.5-flash';
-type MissionStatus = 'incomplete' | 'awaiting_feedback' | 'complete';
-
-const ROLEPLAY_PROMPT = `Write the next reply in a never-ending fictional roleplay chat set in the magical world of Kodarys, where programming in Python is a form of arcane power. The roleplay takes place between the system-controlled NPCs (Professor Sygnus, Lyra, Raxos, and other dungeon entities) and {{user}}, who plays the protagonist apprentice. Use all provided descriptions, personalities, methodologies, and mission structures to deeply understand and act as every NPC accurately.
-
-Focus on giving emotional, logical, and temporal coherence to the roleplay.
-Always stay in character, avoid repetition, and develop the plot slowly, ensuring that each NPC remains dynamic, expressive, and actively influencing the story. Characters must show initiative and never fall into passivity. Use impactful, concise writing. Avoid purple prose and overly flowery descriptions. Adhere strictly to show, don’t tell. Prioritize the use of observable details — body language, facial expressions, tone of voice, pauses, hesitation, tension — to create an immersive, vivid experience without exposing internal monologues unless naturally perceptible.
-
-NPCs must be proactive participants, driving the scene forward with their personalities, emotions, and reactions.
-Characters must introduce new micro-events, obstacles, dungeon encounters, and interpersonal tensions to keep the world alive.
-Surprise {{user}} with creativity, but always within the logic of the Codarys world and the module’s teaching progression.
-
-This fictional roleplay world exists solely for educational and recreational purposes.
-NPCs must avoid explicit, sexual, or gratuitously violent content.
-Conflict, tension, rivalry, affection and drama are allowed — but always safe, PG-13 and designed to reinforce narrative and learning coherence.
-
-Follow the formatting and style of previous responses, aiming for 2–4 paragraphs per reply.
-FORMATTING: Do not use Markdown headers. Keep it looking like a chat log.`;
 
 const NavbarLocal: React.FC = () => {
   return (
-    <nav className="absolute top-0 left-0 w-full z-50 px-6 py-4 flex justify-between items-center pointer-events-none">
+    <nav className="absolute top-0 left-0 w-full z-50 !px-6 !py-4 flex justify-between items-center pointer-events-none">
+      {/* Lado Esquerdo: Logo */}
       <div className="flex items-center gap-2 pointer-events-auto cursor-pointer group">
         <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm border border-white/10 group-hover:bg-purple-500/20 transition-colors">
           <Sparkles className="w-5 h-5 text-purple-300" />
         </div>
-        <span className="font-bold text-lg tracking-wide text-white/90 drop-shadow-md">
+        {/* Ao clicar no logo, também leva para o perfil se estiver logado */}
+        <Link to='/profile' className="font-bold text-lg tracking-wide text-white/90 drop-shadow-md">
           KODARYS
-        </span>
+        </Link>
       </div>
 
+      {/* Lado Direito: Botão Voltar para Área Logada */}
       <div className="pointer-events-auto">
-        <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white">
-          <Menu className="w-6 h-6" />
-        </button>
+        <Link 
+          to="/progresso" 
+          className="flex items-center gap-2 !px-4 !py-2 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white border border-transparent hover:border-white/10"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Voltar</span>
+        </Link>
       </div>
     </nav>
   );
@@ -130,7 +60,7 @@ interface CodeEditorProps {
   runCode: () => void;
   terminalOutput: string[];
   executionError: string | null;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({
@@ -142,146 +72,86 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   onClose,
 }) => {
   return (
-    <div className="absolute inset-0 z-40 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
-      <div className="w-full max-w-6xl h-[85vh] flex flex-col md:flex-row gap-4">
-        <div className="md:w-1/3 flex flex-col gap-4">
-          <div className="bg-black/40 border border-white/10 rounded-2xl p-6 flex-1 overflow-y-auto shadow-2xl backdrop-blur-sm">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-xs font-mono uppercase tracking-widest text-purple-400">Mission M01</span>
+    <div className="w-full h-full flex flex-col gap-4">
+      <div className="flex-1 bg-[#0f172a]/90 rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden relative backdrop-blur-sm">
+        <div className="flex items-center justify-between !px-4 !py-3 bg-white/10 border-b border-white/5">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-500/50" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
+              <div className="w-3 h-3 rounded-full bg-green-500/50" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-4">Speak to the Gate</h2>
-            <div className="space-y-4 text-slate-300 text-sm leading-relaxed">
-              <p>The runes on the gate shimmer with an expectant hum. They await a command of pure logic.</p>
-              <p>
-                <strong>Task:</strong> Write a Python script that greets the gate properly using{' '}
-                <code className="text-purple-300 bg-purple-900/30 px-1 rounded">print()</code>.
-              </p>
-              <div className="bg-black/40 p-4 rounded-lg border border-white/5 mt-4">
-                <h3 className="text-purple-300 font-semibold mb-2">Grimoire Notes:</h3>
-                <ul className="list-disc list-inside space-y-2 text-slate-400">
-                  <li>
-                    Strings must be wrapped in quotes: <span className="font-mono text-yellow-200">"Hello"</span>
-                  </li>
-                  <li>Variables store power (data) for later use.</li>
-                  <li>
-                    Use the <span className="font-mono text-green-300">Execute</span> button to cast your spell.
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <span className="ml-3 text-xs text-slate-400 font-mono">script.py</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={runCode}
+              className="flex items-center gap-2 !px-3 !py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-md transition-all shadow-lg shadow-purple-900/20"
+            >
+              <Play className="w-3 h-3 fill-current" /> Run Code
+            </button>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="md:w-2/3 flex flex-col gap-4">
-          <div className="flex-1 bg-black/40 rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden relative backdrop-blur-sm">
-            <div className="flex items-center justify-between px-4 py-3 bg-white/5 border-b border-white/5">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/50" />
-                </div>
-                <span className="ml-3 text-xs text-slate-400 font-mono">script.py</span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={runCode}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-md transition-all shadow-lg shadow-purple-900/20"
-                >
-                  <Play className="w-3 h-3 fill-current" /> Run Code
-                </button>
-                <button
-                  onClick={onClose}
-                  className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+        <textarea
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          spellCheck={false}
+          className="flex-1 w-full bg-[#0c1224] p-4 font-mono text-sm text-gray-200 focus:outline-none resize-none"
+          placeholder="# Begin your incantation..."
+        />
 
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              spellCheck={false}
-              className="flex-1 w-full bg-[#0f1117]/60 p-4 font-mono text-sm text-gray-300 focus:outline-none resize-none"
-              placeholder="# Begin your incantation..."
-            />
-
-            <div className="h-1/3 bg-black/80 border-t border-white/10 p-4 font-mono text-sm overflow-y-auto">
-              <div className="flex items-center gap-2 text-slate-500 mb-2 text-xs uppercase tracking-wider">
-                <Terminal className="w-3 h-3" /> Output Log
-              </div>
-              {terminalOutput.length === 0 && !executionError && (
-                <span className="text-slate-600 italic opacity-50">...awaiting execution...</span>
-              )}
-              {terminalOutput.map((line, idx) => (
-                <div key={idx} className="text-green-400 whitespace-pre-wrap animate-pulse-fast">{`> ${line}`}</div>
-              ))}
-              {executionError && (
-                <div className="text-red-400 mt-2 whitespace-pre-wrap border-l-2 border-red-500 pl-3">
-                  {`Error: ${executionError}`}
-                </div>
-              )}
-            </div>
+        <div className="h-1/3 bg-[#0b1021] border-t border-white/10 p-4 font-mono text-sm overflow-y-auto">
+          <div className="flex items-center gap-2 text-slate-400 mb-2 text-xs uppercase tracking-wider">
+            <Terminal className="w-3 h-3" /> Output Log
           </div>
+          {terminalOutput.length === 0 && !executionError && (
+            <span className="text-slate-600 italic opacity-70">...awaiting execution...</span>
+          )}
+          {terminalOutput.map((line, idx) => (
+            <div key={idx} className="text-green-300 whitespace-pre-wrap">{`> ${line}`}</div>
+          ))}
+          {executionError && (
+            <div className="text-red-300 mt-2 whitespace-pre-wrap border-l-2 border-red-500/60 pl-3">
+              {`Error: ${executionError}`}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-const pickAutoPersona = (stage: Stage, last?: PersonaKey): PersonaKey => {
-  if (stage === 'story') {
-    if (!last || last === 'narrador') return 'sygnus';
-    if (last === 'sygnus') return 'lyra';
-    if (last === 'lyra') return 'raxos';
-    return 'narrador';
-  }
-  return last === 'lyra' ? 'sygnus' : 'lyra';
-};
-
 export default function LabPage() {
-  const [userId, setUserId] = useState<string>(() => {
-    if (typeof window === 'undefined') return 'demo-user';
-    return localStorage.getItem('kodarys_user') ?? 'demo-user';
-  });
+  const { user } = useAuth();
+  const userId = user?.email;
+  const navigate = useNavigate();
+  const moduleCompletionSentRef = useRef(false);
+
   const [code, setCode] = useState(STARTER_CODE);
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [lastAttempt, setLastAttempt] = useState<LastAttempt | null>(null);
-  const [progress, setProgress] = useState<ProgressState>({});
   const [currentMission, setCurrentMission] = useState<string>(DEFAULT_MISSION);
+  const [moduleCompleted, setModuleCompleted] = useState(false);
+  const [pyodide, setPyodide] = useState<any>(null);
+  const [pyStatus, setPyStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      role: 'model',
-      persona: 'narrador',
-      text: `${PERSONAS.narrador.prefix}: O corredor inicial da Dungeon Primeva ecoa com estalos de energia instável enquanto você avança ao lado dos outros dois aprendizes. Lyra caminha próxima de você, segurando o cajado com as duas mãos — nervosa, mas sorrindo sempre que seus olhos encontram os seus. Raxos, por outro lado, mantém os braços cruzados, alternando olhares irritados entre você e Lyra, como se cada passo fosse uma disputa invisível.`,
-    },
-    {
-      role: 'model',
-      persona: 'sygnus',
-      text: `${PERSONAS.sygnus.prefix}: À frente, o Professor Sygnus para diante de uma porta de pedra coberta por runas quebradas.\nEle se vira, a voz calma:\n“Este lugar reage à lógica… e ao código. Aqui, cada ação exige compreensão verdadeira, não memorização.”`,
-    },
-    {
-      role: 'model',
-      persona: 'lyra',
-      text: `${PERSONAS.lyra.prefix}: Lyra inspira fundo.\n“Eu… espero não atrapalhar. Se eu errar algo, você me ajuda, né?”\nEla olha diretamente para você.`,
-    },
-    {
-      role: 'model',
-      persona: 'raxos',
-      text: `${PERSONAS.raxos.prefix}: Raxos revira os olhos.\n“Tsc. Se precisar de ajuda, pergunte a mim. Ou será que já pretende depender do protagonista logo no começo?”`,
-    },
-    {
-      role: 'model',
-      persona: 'sygnus',
-      text: `${PERSONAS.sygnus.prefix}: Sygnus levanta a mão, impondo silêncio.\n“A Dungeon Primeva testa não só suas habilidades, mas suas relações. Este é o primeiro passo da jornada que vocês trilharão juntos.”\n\nEle olha diretamente para você.\n\n“Então me diga… você está pronto para abrir a primeira porta?”`,
-    },
-  ]);
+  
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialMessages);
+  
   const [isStreaming, setIsStreaming] = useState(false);
   const [stage, setStage] = useState<Stage>('story');
   const [missionStatus, setMissionStatus] = useState<MissionStatus>('incomplete');
+  const storageKey = useMemo(() => `kodarys-code-${userId ?? 'anon'}`, [userId]);
 
   const placeholderIndexRef = useRef<number | null>(null);
   const lastPersonaRef = useRef<PersonaKey>('sygnus');
@@ -294,6 +164,52 @@ export default function LabPage() {
     return new GoogleGenAI({ apiKey });
   }, [apiKey]);
 
+  // Carrega Pyodide
+  useEffect(() => {
+    const ensurePyodide = async () => {
+      if (typeof window === 'undefined' || pyodide || pyStatus === 'loading') return;
+      setPyStatus('loading');
+      try {
+        if (!window.loadPyodide) {
+          await new Promise<void>((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Falha ao carregar Pyodide'));
+            document.body.appendChild(script);
+          });
+        }
+        const py = await window.loadPyodide?.({
+          stdin: () => '',
+        });
+        if (py) {
+          setPyodide(py);
+          setPyStatus('ready');
+        } else {
+          throw new Error('Pyodide não inicializado');
+        }
+      } catch (err) {
+        setPyStatus('error');
+        setExecutionError(err instanceof Error ? err.message : String(err));
+      }
+    };
+    void ensurePyodide();
+  }, [pyodide, pyStatus]);
+
+  // Carrega o último código digitado (por usuário)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved !== null) {
+        setCode(saved);
+      } else {
+        setCode(STARTER_CODE);
+      }
+    } catch {
+      // ignora erro de storage
+    }
+  }, [storageKey]);
+
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -303,42 +219,55 @@ export default function LabPage() {
     }
   }, [chatMessages, stage]);
 
-  const updateUserId = (value: string) => {
-    const normalized = value.trim() || 'demo-user';
-    setUserId(normalized);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('kodarys_user', normalized);
-    }
-  };
-
+  // --- CARREGAR PROGRESSO E CHAT DO BACKEND ---
   useEffect(() => {
     const fetchProgress = async () => {
+      if (!userId) return; // Não carrega se não tiver user
+      
       try {
-        const res = await fetch(`http://localhost:8080/api/progresso?id_usuario=${encodeURIComponent(userId)}`);
+        const res = await fetch(`http://localhost:8080/api/progresso?userId=${encodeURIComponent(userId)}`);
         if (!res.ok) return;
+        
         const data = await res.json();
-        setProgress({
-          ultimaMissao: data.ultima_missao,
-          ultimaTentativaMissao: data.ultima_tentativa_missao,
-          ultimaTentativaResultado: data.ultima_tentativa_resultado,
-          pontoHistoria: data.ponto_historia_atual,
-        });
+        
         if (data.missao_atual) {
           setCurrentMission(data.missao_atual);
         } else if (data.ultima_missao) {
           setCurrentMission(data.ultima_missao);
-        } else {
-          setCurrentMission(DEFAULT_MISSION);
         }
+
         if (data.status_missao === 'CONCLUIDA') {
           setMissionStatus('complete');
         } else {
           setMissionStatus('incomplete');
         }
-      } catch {
-        // ignora erro silenciosamente
+
+        if (data.modulo_status === 'CONCLUIDO') {
+          setModuleCompleted(true);
+          setMissionStatus('complete');
+        }
+
+        if (data.historico_dialogos && Array.isArray(data.historico_dialogos) && data.historico_dialogos.length > 0) {
+          const loadedMsgs: ChatMessage[] = data.historico_dialogos.map((d: any) => ({
+            role: d.persona === 'user' ? 'user' : 'model',
+            text: d.texto,
+            persona: d.persona === 'user' ? undefined : d.persona
+          }));
+          
+          setChatMessages(loadedMsgs);
+          
+          setTimeout(() => {
+            if (chatContainerRef.current) {
+              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+            }
+          }, 100);
+        } 
+        
+      } catch (error) {
+        console.error("Erro ao carregar progresso:", error);
       }
     };
+
     fetchProgress();
   }, [userId]);
 
@@ -357,7 +286,7 @@ export default function LabPage() {
         }),
       });
     } catch {
-      // silencia em dev
+      // silencia erro de rede
     }
   };
 
@@ -378,109 +307,87 @@ export default function LabPage() {
         }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setProgress((prev) => ({
-          ...prev,
-          ultimaTentativaMissao: currentMission,
-          ultimaTentativaResultado: data.resultado ?? prev.ultimaTentativaResultado,
-          ultimaMissao: data.resultado === 'SUCESSO' ? currentMission : prev.ultimaMissao,
-        }));
+        void res.json();
       }
     } catch {
-      // silencia em dev
+      // silencia erro
     }
   };
 
-  const runCode = () => {
-    const output: string[] = [];
-    const errors: string[] = [];
-    const vars: Record<string, string | number> = {};
+  const persistModuleCompletion = async () => {
+    if (!userId || moduleCompletionSentRef.current) return;
+    moduleCompletionSentRef.current = true;
+    try {
+      await fetch('http://localhost:8080/api/evento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id_usuario: userId,
+          id_missao: currentMission,
+          tipo: 'concluir_modulo',
+        }),
+      });
+    } catch {
+      // silencia erro
+    }
+  };
 
-    const buildRunFeedback = (success: boolean, joinedOutput: string, firstError?: string) => {
-      const lowerOut = joinedOutput.toLowerCase();
-      const looksLikeGreeting =
-        lowerOut.includes('ola') || lowerOut.includes('olá') || lowerOut.includes('hello') || lowerOut.includes('sauda');
+  const handleSetCode = (newCode: string) => {
+    setCode(newCode);
+    try {
+      localStorage.setItem(storageKey, newCode);
+    } catch {
+      // ignora erro de storage
+    }
+  };
 
-      if (!success) {
-        const text = `${PERSONAS.raxos.prefix}: Tsc... a magia quebrou${
-          firstError ? ` em "${firstError}"` : ''
-        }. Reescreva usando print() com aspas e reencontre o foco.`;
-        return { persona: 'raxos' as PersonaKey, text };
-      }
-
-      if (looksLikeGreeting) {
-        const text = `${PERSONAS.sygnus.prefix}: A porta reagiu à saudação "${joinedOutput}". Próximo passo: personalize a frase (inclua seu nome ou um título) e veja como ecoa.`;
-        return { persona: 'sygnus' as PersonaKey, text };
-      }
-
-      const text = `${PERSONAS.lyra.prefix}: Rodou sem erro, mas a runa quer uma saudação clara. Tenta um "Olá, Dungeon!" e me mostra de novo?`;
-      return { persona: 'lyra' as PersonaKey, text };
-    };
-
-    const lines = code.split(/\r?\n/);
-    lines.forEach((raw, idx) => {
-      const line = raw.trim();
-      if (!line || line.startsWith('#')) return;
-
-      const printMatch = line.match(/^print\s*\((.*)\)\s*$/);
-      const assignMatch = line.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/);
-
-      if (assignMatch) {
-        const [, name, valueRaw] = assignMatch;
-        const strMatch = valueRaw.match(/^["'](.+)["']$/);
-        if (strMatch) {
-          vars[name] = strMatch[1];
-        } else if (!Number.isNaN(Number(valueRaw))) {
-          vars[name] = Number(valueRaw);
-        } else if (valueRaw in vars) {
-          vars[name] = vars[valueRaw];
-        } else {
-          errors.push(`Linha ${idx + 1}: valor inválido em "${line}"`);
-        }
-        return;
-      }
-
-      if (printMatch) {
-        const inside = printMatch[1].trim();
-        const strMatch = inside.match(/^["'](.*)["']$/);
-        if (strMatch) {
-          output.push(strMatch[1]);
-          return;
-        }
-        if (inside in vars) {
-          output.push(String(vars[inside]));
-          return;
-        }
-        errors.push(`Linha ${idx + 1}: print não reconheceu "${inside}"`);
-        return;
-      }
-
-      errors.push(`Linha ${idx + 1}: comando não suportado "${line}"`);
-    });
-
-    if (!output.length && !errors.length) {
-      output.push('(sem saída)');
+  const runCode = async () => {
+    setStage('practice');
+    if (!pyodide) {
+      setExecutionError(pyStatus === 'loading' ? 'Carregando engine Python...' : 'Engine Python indisponível.');
+      return;
     }
 
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    pyodide.setStdout?.({ batched: (data: string) => stdout.push(data) });
+    pyodide.setStderr?.({ batched: (data: string) => stderr.push(data) });
+
+    pyodide.globals.set('__pyodide_input', (msg?: string) => {
+      const val = window.prompt(msg ?? 'Digite um valor:');
+      return val ?? '';
+    });
+    await pyodide.runPythonAsync(`import builtins\nbuiltins.input = __pyodide_input`);
+
+    try {
+      await pyodide.runPythonAsync(code);
+    } catch (err) {
+      stderr.push(err instanceof Error ? err.message : String(err));
+    }
+
+    const output = stdout.length ? stdout.map((line) => line.trimEnd()) : [];
+    const errorText = stderr.join('\n').trim() || null;
+
     setTerminalOutput(output);
-    setExecutionError(errors.length ? errors.join('\n') : null);
-    setLastAttempt({ code, output, error: errors.length ? errors.join('\n') : null });
-    void persistTentativa(code, output, errors.length ? errors.join('\n') : undefined);
+    setExecutionError(errorText);
+    setLastAttempt({ code, output, error: errorText });
+    void persistTentativa(code, output, errorText ?? undefined);
 
     const hasVisibleOutput = output.some((line) => line.trim().length > 0);
-    const success = errors.length === 0 && hasVisibleOutput;
+    const success = !errorText && hasVisibleOutput;
     setMissionStatus(success ? 'awaiting_feedback' : 'incomplete');
     const joinedOutput = output.join(' | ').trim();
-    const runFeedback = buildRunFeedback(success, joinedOutput, errors[0]);
+    const runFeedback = success
+      ? { persona: 'sygnus' as PersonaKey, text: `${PERSONAS.sygnus.prefix}: Boa execução. A runa respondeu ao seu comando.` }
+      : { persona: 'raxos' as PersonaKey, text: `${PERSONAS.raxos.prefix}: Magia falhou: ${errorText ?? 'erro desconhecido'}. Tente novamente.` };
 
-    // Envia feedback via LLM, usando o último persona calculado para o sistema; se quiser fixar no professor, passe 'sygnus'.
     const missionObjective = MISSION_OBJECTIVES[currentMission] ?? MISSION_OBJECTIVES[DEFAULT_MISSION];
     const autoPrompt = `Avalie a execução automática: ${success ? 'sucesso' : 'falha'}.
-Missão: ${currentMission}
+Conceito foco: ${missionObjective}
 Saída: ${joinedOutput || '(sem saída)'}
-Erro: ${errors[0] ?? 'nenhum'}
-Objetivo: ${missionObjective}
-Dê feedback curto e pedagógico em tom de ${runFeedback.persona}.`;
+Erro: ${errorText ?? 'nenhum'}
+Não cite códigos de missão. Dê feedback curto, pedagógico e mencione o próximo passo como uma pequena cena ou obstáculo resolvido. Tom de ${runFeedback.persona}.`;
     void sendPrompt(autoPrompt, runFeedback.persona, true);
   };
 
@@ -488,15 +395,16 @@ Dê feedback curto e pedagógico em tom de ${runFeedback.persona}.`;
     if (!prompt.trim() || isStreaming) return;
     const persona = forcedPersona ?? pickAutoPersona(stage, lastPersonaRef.current);
     lastPersonaRef.current = persona;
+    
     if (!silentUser) {
       void persistDialog(prompt, 'user');
     }
 
     setChatMessages((prev) => {
-      const placeholderIndex = prev.length + 1;
-      placeholderIndexRef.current = placeholderIndex;
       const withUser = silentUser ? [] : [{ role: 'user' as const, text: prompt }];
-      return [...prev, ...withUser, { role: 'model' as const, text: '', persona }];
+      const combined = [...prev, ...withUser, { role: 'model' as const, text: '', persona }];
+      placeholderIndexRef.current = combined.length - 1;
+      return combined;
     });
     setIsStreaming(true);
 
@@ -517,22 +425,21 @@ Dê feedback curto e pedagógico em tom de ${runFeedback.persona}.`;
     const allowedConcepts = MISSION_ALLOWED[currentMission] ?? MISSION_ALLOWED[DEFAULT_MISSION];
     const isFirstContact = !lastAttempt;
     const attemptContext = lastAttempt
-      ? `\n\nÚltima execução do aprendiz (avalie e dê feedback objetivo):\nMissão: ${currentMission}\nCódigo:\n${lastAttempt.code}\nSaída: ${lastAttempt.output.join(
-          ' | '
-        )}\nErro: ${lastAttempt.error ?? 'nenhum'}`
+      ? `\n\nÚltima execução do aprendiz (avalie e dê feedback objetivo):\nMissão: ${currentMission}\nCódigo:\n${lastAttempt.code}\nSaída: ${lastAttempt.output.join(' | ')}\nErro: ${lastAttempt.error ?? 'nenhum'}`
       : '';
 
     const onboarding = isFirstContact
       ? '\nÉ o primeiro contato do aprendiz com programação; Sygnus deve apresentar o conceito do print/strings do zero antes de qualquer pergunta ou tarefa.'
       : '';
 
-    const systemText = `${ROLEPLAY_PROMPT}
-
-Contexto adicional: Módulo 1 de Python (interpretador, print, strings, variáveis, input, conversão, operadores).
-Você é ${PERSONAS[persona].label}. ${PERSONAS[persona].accent}
-Etapa atual: ${stage === 'story' ? 'história/explicação' : 'prática/feedback do desafio'}.
-Objetivo atual: ${missionObjective}
-Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allowedConcepts}. NÃO introduza conceitos fora dessa lista (ex.: não ensinar novas sintaxes além do escopo). Metodologia obrigatória: (1) Sygnus explica o conceito atual com exemplo certo/errado + mini desafio; (2) aluno pratica; (3) professor dá feedback curto e faz 1 pergunta simples; (4) NPC (Lyra ou Raxos) traz código bugado para o aluno corrigir; (5) conclua e convide a seguir para a próxima missão. Não repita passos já concluídos, não fique preso em loop. Seja didático e direto (2–4 frases), traga 1 dica prática e 1 mini desafio curto. Menos narrativa, mais explicação de código e próximos passos.${onboarding}`;
+    const systemText = buildSystemPrompt({
+      persona,
+      stage,
+      missionObjective,
+      missionStatus,
+      allowedConcepts,
+      onboarding,
+    });
 
     const userPrompt =
       prompt +
@@ -558,16 +465,10 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
       });
 
       let assembled = '';
-      let prefixAdded = false;
 
       for await (const chunk of stream) {
         const text = chunk.text ?? '';
-        if (!prefixAdded) {
-          assembled = `${PERSONAS[persona].prefix}: ${text}`;
-          prefixAdded = true;
-        } else {
-          assembled += text;
-        }
+        assembled += text;
 
         setChatMessages((prev) => {
           const updated = [...prev];
@@ -576,9 +477,12 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
           return updated;
         });
       }
+      
       void persistDialog(assembled, persona);
+      
       if (missionStatus === 'awaiting_feedback') {
         setMissionStatus('complete');
+        handleMissionCompletion(currentMission);
       }
     } catch (err) {
       setChatMessages((prev) => {
@@ -599,8 +503,62 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
   const sendMessage = async () => {
     if (!chatInput.trim()) return;
     const prompt = chatInput.trim();
+    if (prompt === FINAL_JUMP_KEYWORD) {
+      setChatInput('');
+      setModuleCompleted(false);
+      setCurrentMission('M05_FINAL');
+      setMissionStatus('incomplete');
+      setStage('story');
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'model',
+          persona: 'sygnus',
+          text: `${PERSONAS.sygnus.prefix}: Atalho de teste ativado. Você foi levado ao desafio final da dungeon. Prepare uma saudação com nome e idade, some +5 na idade e mostre com print().`,
+        },
+      ]);
+      return;
+    }
     setChatInput('');
     await sendPrompt(prompt);
+  };
+
+  const getNextMission = (mission: string) => {
+    const idx = MISSION_ORDER.indexOf(mission);
+    if (idx === -1) return null;
+    return MISSION_ORDER[idx + 1] ?? null;
+  };
+
+  const handleMissionCompletion = (mission: string) => {
+    const next = getNextMission(mission);
+    if (!next) {
+      setModuleCompleted(true);
+      const congrats = `${PERSONAS.sygnus.prefix}: Parabéns! Você concluiu o Módulo. Sua saudação final ecoou por toda Kodarys.`;
+      setChatMessages((prev) => [...prev, { role: 'model', persona: 'sygnus', text: congrats }]);
+      void persistModuleCompletion();
+      sessionStorage.setItem('kodarys-module-status', 'concluido');
+      setTimeout(() => {
+        if (window.history.length > 1) {
+          navigate(-1);
+        } else {
+          navigate('/', { replace: true });
+        }
+      }, 800);
+      return;
+    }
+    setTimeout(() => {
+      setCurrentMission(next);
+      setMissionStatus('incomplete');
+      setStage('story');
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'model',
+          persona: 'sygnus',
+          text: `${PERSONAS.sygnus.prefix}: Excelente! Avancemos para ${next}. Teste o que aprendeu e me mostre sua próxima execução.`,
+        },
+      ]);
+    }, 300);
   };
 
   return (
@@ -613,170 +571,136 @@ Status da missão: ${missionStatus}. Conceitos permitidos nesta missão: ${allow
           backgroundPosition: 'center',
         }}
       />
-      <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/20 via-black/40 to-black/95 pointer-events-none" />
-      <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-900/10 via-transparent to-black/40 pointer-events-none mix-blend-overlay" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/60 via-black/75 to-black/95 pointer-events-none" />
+      <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-900/10 via-transparent to-black/50 pointer-events-none mix-blend-overlay" />
 
       <NavbarLocal />
 
-      <main className="relative z-20 w-full h-full flex flex-col items-center justify-end pb-8 px-4">
-        <div className="absolute top-4 right-6 z-30 flex items-center gap-2 bg-black/40 border border-white/10 rounded-full px-3 py-1 text-xs text-slate-200 backdrop-blur-md">
-          <span className="uppercase tracking-wide text-slate-400 font-mono">Usuário</span>
-          <input
-            value={userId}
-            onChange={(e) => updateUserId(e.target.value)}
-            className="bg-transparent border-b border-white/20 focus:border-purple-400 outline-none px-1 text-slate-100 placeholder-slate-500 w-32"
-            placeholder="demo-user"
-          />
-        </div>
-
-        <div
-          ref={chatContainerRef}
-          className="w-full max-w-4xl h-[70vh] overflow-y-auto mb-4 pr-2 space-y-4 scroll-smooth mask-image-gradient flex flex-col items-center"
-          style={{ maskImage: 'linear-gradient(to bottom, transparent, black 10%, black 100%)' }}
-        >
-          <div className="w-full max-w-3xl mb-2 px-4">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-slate-200 text-sm">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-purple-300 font-mono mb-1">
-                <Sparkles className="w-3 h-3" /> Objetivo da missão
+      <main className="relative z-20 w-full h-full flex flex-col items-center justify-center !px-4 !py-6">
+        <div className="w-full max-w-7xl flex flex-col gap-4 h-full">
+          {moduleCompleted && (
+            <div className="w-full flex justify-center">
+              <div className="!px-4 !py-2 rounded-full bg-green-600/80 text-white text-sm font-semibold shadow-lg shadow-green-900/30 border border-green-400/50">
+                Parabéns você concluiu o Módulo!
               </div>
-              <p className="text-slate-100">
-                {MISSION_OBJECTIVES[currentMission] ?? MISSION_OBJECTIVES[DEFAULT_MISSION]}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">
-                Missão atual: {currentMission} • Status: {missionStatus}
-              </p>
             </div>
-          </div>
+          )}
 
-          <div className="h-10" />
+          <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-5 flex-1 min-h-[80vh]">
+            <div className="bg-[#0b1021]/85 border border-white/10 rounded-2xl p-4 flex flex-col overflow-hidden shadow-2xl shadow-black/50">
+              <div
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto mb-4 pr-2 space-y-4 scroll-smooth mask-image-gradient"
+                style={{ maskImage: 'linear-gradient(to bottom, transparent, black 8%, black 100%)' }}
+              >
+                {chatMessages.map((msg, idx) => {
+                  const match = msg.text.match(/^([^:]+):(.*)/s);
+                  const name = match ? match[1].trim() : msg.role === 'user' ? 'Human' : 'Unknown';
+                  const content = match ? match[2] : msg.text;
+                  const codeMatch = msg.text.match(/```(?:python)?\\s*([\\s\\S]*?)```/i);
+                  const snippet = codeMatch ? codeMatch[1].trim() : null;
 
-          {chatMessages.map((msg, idx) => {
-            const match = msg.text.match(/^([^:]+):(.*)/s);
-            const name = match ? match[1].trim() : msg.role === 'user' ? 'Human' : 'Unknown';
-            const content = match ? match[2] : msg.text;
-            const codeMatch = msg.text.match(/```(?:python)?\\s*([\\s\\S]*?)```/i);
-            const snippet = codeMatch ? codeMatch[1].trim() : null;
+                  let nameColor = 'text-slate-400';
+                  if (msg.role === 'user') nameColor = 'text-cyan-300 shadow-cyan-500/20 drop-shadow-sm';
+                  else if (name.includes('Sygnus')) nameColor = PERSONAS.sygnus.color;
+                  else if (name.includes('Lyra')) nameColor = PERSONAS.lyra.color;
+                  else if (name.includes('Raxos')) nameColor = PERSONAS.raxos.color;
+                  else if (name.includes('Narrador') || name.includes('Sistema')) nameColor = PERSONAS.narrador.color;
 
-            let nameColor = 'text-slate-400';
-            if (msg.role === 'user') nameColor = 'text-cyan-300 shadow-cyan-500/20 drop-shadow-sm';
-            else if (name.includes('Sygnus')) nameColor = PERSONAS.sygnus.color;
-            else if (name.includes('Lyra')) nameColor = PERSONAS.lyra.color;
-            else if (name.includes('Raxos')) nameColor = PERSONAS.raxos.color;
-            else if (name.includes('Narrador') || name.includes('Sistema')) nameColor = PERSONAS.narrador.color;
-
-            return (
-              <div key={idx} className="group animate-fade-in-up w-full flex justify-center">
-                <div className="w-full max-w-3xl flex flex-col gap-1 py-1 px-4 rounded-lg hover:bg-white/5 transition-colors duration-300">
-                  <span className={`text-sm font-bold font-mono uppercase tracking-wider ${nameColor}`}>
-                    {msg.role === 'user' ? 'Aprendiz' : name}
-                  </span>
-                  <p className="text-slate-200 text-sm md:text-base leading-relaxed font-light opacity-90 group-hover:opacity-100 whitespace-pre-wrap italic">
-                    {content}
-                  </p>
-                  {snippet && (
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => setCode(snippet)}
-                        className="text-xs px-2 py-1 rounded bg-purple-700/60 text-white border border-purple-500/50 hover:bg-purple-600 transition-colors"
-                      >
-                        Enviar código para IDE
-                      </button>
+                  return (
+                    <div key={idx} className="group animate-fade-in-up w-full flex justify-center">
+                      <div className="w-full max-w-3xl flex flex-col gap-1 !py-1 !px-4 rounded-lg hover:bg-white/5 transition-colors duration-300">
+                        <span className={`text-sm font-bold font-mono uppercase tracking-wider ${nameColor}`}>
+                          {msg.role === 'user' ? (user?.name || userId) : name}
+                        </span>
+                        <p className="text-slate-200 text-sm md:text-base leading-relaxed font-light opacity-95 group-hover:opacity-100 whitespace-pre-wrap">
+                          {content}
+                        </p>
+                        {snippet && (
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => {
+                                handleSetCode(snippet);
+                                setStage('practice');
+                              }}
+                              className="text-xs !px-2 !py-1 rounded bg-purple-700/60 text-white border border-purple-500/50 hover:bg-purple-600 transition-colors"
+                            >
+                              Enviar código para IDE
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  );
+                })}
+                {isStreaming && (
+                  <div className="flex items-center gap-2 !px-2 opacity-50">
+                    <span className="text-purple-400 font-mono text-xs uppercase animate-pulse">Recebendo sinal...</span>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div className="glass-panel rounded-2xl p-1 flex items-center shadow-2xl shadow-purple-900/10 bg-[#0f172a]/80 border border-white/10">
+                <textarea
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  placeholder={isStreaming ? 'O éter está ocupado...' : 'Fale seu destino... (Shift+Enter para nova linha)'}
+                  className="flex-1 bg-transparent border-none text-white placeholder-slate-500 focus:ring-0 resize-none min-h-[50px] max-h-[120px] !py-3 !px-4 text-base"
+                  disabled={isStreaming}
+                  rows={1}
+                />
+                <div className="flex items-center gap-2 pr-2 pb-2">
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={!chatInput.trim() || isStreaming}
+                    className={`p-2 rounded-xl transition-all duration-200 ${
+                      chatInput.trim() && !isStreaming
+                        ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-500/25'
+                        : 'bg-white/5 text-slate-600 cursor-not-allowed'
+                    } ml-[1px]`}
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-            );
-          })}
-          {isStreaming && (
-            <div className="flex items-center gap-2 px-2 opacity-50">
-              <span className="text-purple-400 font-mono text-xs uppercase animate-pulse">Recebendo sinal...</span>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
 
-        <div className="w-full max-w-3xl relative">
-          {stage === 'story' && (
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-3 pb-2 opacity-0 hover:opacity-100 transition-opacity duration-300">
-              <button
-                onClick={() => setStage('practice')}
-                className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 text-purple-200 px-4 py-1.5 rounded-full text-xs hover:bg-purple-900/40 transition-all"
-              >
-                <Code2 className="w-3 h-3" /> Abrir Grimório (IDE)
-              </button>
-              <button className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 text-slate-300 px-4 py-1.5 rounded-full text-xs hover:bg-slate-800/40 transition-all">
-                <HelpCircle className="w-3 h-3" /> Ajuda
-              </button>
             </div>
-          )}
 
-          <div className="glass-panel rounded-2xl p-1 flex items-center shadow-2xl shadow-purple-900/10">
-            <textarea
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              placeholder={isStreaming ? 'O éter está ocupado...' : 'Fale seu destino... (Shift+Enter para nova linha)'}
-              className="flex-1 bg-transparent border-none text-white placeholder-slate-500 focus:ring-0 resize-none min-h-[50px] max-h-[120px] py-3 px-4 text-base"
-              disabled={isStreaming}
-              rows={1}
-            />
-            <div className="flex items-center gap-2 pr-2 pb-2">
-              <button
-                onClick={() => sendMessage()}
-                disabled={!chatInput.trim() || isStreaming}
-                className={`p-2 rounded-xl transition-all duration-200 ${
-                  chatInput.trim() && !isStreaming
-                    ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-500/25'
-                    : 'bg-white/5 text-slate-600 cursor-not-allowed'
-                } ml-[1px]`}
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="text-center mt-3">
-            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">
-              Chronicles of Kodarys • Módulo 01 • <span className="text-purple-500/60">Conectado</span>
-            </p>
-            <div className="mt-2 text-xs text-slate-400 flex justify-center gap-3">
-              <span className="px-2 py-1 bg-white/5 rounded-full border border-white/10">
-                Última missão: {progress.ultimaMissao ?? '—'}
-              </span>
-              <span className="px-2 py-1 bg-white/5 rounded-full border border-white/10">
-                Última tentativa: {progress.ultimaTentativaMissao ?? '—'} ({progress.ultimaTentativaResultado ?? '—'})
-              </span>
-              <span className="px-2 py-1 bg-white/5 rounded-full border border-white/10">
-                História: {progress.pontoHistoria ?? '—'}
-              </span>
+            <div className="bg-[#0b1021]/85 border border-white/10 rounded-2xl p-4 backdrop-blur-lg shadow-2xl shadow-black/50 min-h-[60vh] flex flex-col gap-3 !p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-200 font-semibold">
+                  <Code2 className="w-4 h-4 text-purple-300" />
+                  <span>Grimório do Aprendiz</span>
+                </div>
+                <div className="text-[11px] text-purple-300 font-mono uppercase tracking-[0.2em]">
+                  {stage === 'practice' ? 'Prática ativa' : 'Aberto'}
+                </div>
+              </div>
+              <div className="flex-1 min-h-[50vh]">
+                <CodeEditor
+                  code={code}
+                  setCode={handleSetCode}
+                  runCode={runCode}
+                  terminalOutput={terminalOutput}
+                  executionError={executionError}
+                />
+              </div>
             </div>
           </div>
         </div>
       </main>
-
-      {stage === 'practice' && (
-        <CodeEditor
-          code={code}
-          setCode={setCode}
-          runCode={runCode}
-          terminalOutput={terminalOutput}
-          executionError={executionError}
-          onClose={() => setStage('story')}
-        />
-      )}
-
-      <button
-        onClick={() => setStage('practice')}
-        className="fixed bottom-6 right-6 z-30 p-3 rounded-full bg-purple-600 text-white shadow-lg shadow-purple-900/30 hover:bg-purple-500 transition-colors flex items-center gap-2"
-      >
-        <Code2 className="w-5 h-5" />
-        <span className="text-sm font-semibold">IDE</span>
-      </button>
     </div>
   );
+}
+declare global {
+  interface Window {
+    loadPyodide?: any;
+  }
 }

@@ -10,7 +10,6 @@ export default function UserCard() {
         e.stopPropagation();
         e.preventDefault();
         signOut();
-        navigate("/auth/login");
     };
 
     return (

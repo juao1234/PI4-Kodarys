@@ -5,49 +5,60 @@ import UserIcon from "@mui/icons-material/Person";
 import EmailIcon from "@mui/icons-material/Email";
 import EyeIcon from "@mui/icons-material/Visibility";
 import EyeClosedIcon from "@mui/icons-material/VisibilityOff";
-import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import Navbar from "../components/Navbar"; 
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
 
-  // 👇 estados dos campos
+  // estados dos campos
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [idade, setIdade] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmSenha, setConfirmSenha] = useState("");
 
-  const { signIn } = useAuth(); // por enquanto não uso aqui, só no login
   const navigate = useNavigate();
 
-  // 🔵 Função chamada ao clicar em "Cadastrar"
+  // Função chamada ao clicar em "Cadastrar"
   async function handleRegister() {
-    // validações simples no front
-    if (!idade || Number(idade) < 1) {
-      alert("Digite uma idade válida.");
+    const validationErrors: string[] = [];
+    const trimmedNome = nome.trim();
+    const trimmedEmail = email.trim();
+    const idadeNumber = Number(idade);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const senhaComplexa = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/; // 8+ caracteres com letras e números
+
+    if (!trimmedNome) validationErrors.push("Informe o nome do usuário.");
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail))
+      validationErrors.push("Digite um email válido.");
+    if (!idade || Number.isNaN(idadeNumber) || idadeNumber < 1)
+      validationErrors.push("Digite uma idade válida.");
+    if (!senhaComplexa.test(senha))
+      validationErrors.push(
+        "Senha deve ter pelo menos 8 caracteres e conter letras e números."
+      );
+    if (!confirmSenha) validationErrors.push("Confirme a senha.");
+    if (senha && confirmSenha && senha !== confirmSenha)
+      validationErrors.push("As senhas não coincidem.");
+
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
-    if (!nome || !email || !senha || !confirmSenha) {
-      alert("Preencha todos os campos.");
-      return;
-    }
-
-    if (senha !== confirmSenha) {
-      alert("As senhas não coincidem.");
-      return;
-    }
+    setErrors([]);
 
     setLoading(true);
 
     const novoUsuario = {
-      nome,
-      email,
+      nome: trimmedNome,
+      email: trimmedEmail,
       senha,
-      idade: Number(idade),
+      idade: idadeNumber,
     };
 
     console.log("Enviando para backend:", novoUsuario);
@@ -78,17 +89,31 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="login-page">
+    <div className="login-page relative"> {/* Adicionado relative aqui */}
+      <Navbar /> {/* Adicionado Navbar aqui */}
+
       <h1 className="text-white text-5xl">Kodarys</h1>
       <div className="flex flex-col gap-8 bg-slate-900/80 !p-16 border border-slate-950/30 rounded-2xl ">
         <div className="flex flex-col gap-3 !text-center">
-          <h3 className="text-white font-inherit tracking-wide text-xl font-bold">
-            CRIE A SUA LENDA
-          </h3>
+          <div className="flex flex-rows justify-center gap-3">
+            <h3 className="text-white font-inherit tracking-wide text-xl font-bold">
+              CRIE A SUA LENDA
+            </h3>
+          </div>
           <h4 className="text-neutral-400 font-inherit text-lg">
             Inicie sua jornada no mundo da programação e magia.
           </h4>
         </div>
+
+        {errors.length > 0 && (
+          <div className="rounded-lg border border-red-500/40 bg-red-950/40 p-3 text-left text-sm text-red-100">
+            <ul className="list-disc list-inside space-y-1">
+              {errors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Nome */}
         <div className="flex flex-col gap-2">

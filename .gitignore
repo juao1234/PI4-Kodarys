@@ -1,2 +1,11 @@
 .env
 node_modules
+.vscode
+.idea
+.class
+*.class
+target/
+dist/
+*.log
+*.properties
+.DS_Store

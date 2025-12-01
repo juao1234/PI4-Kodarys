@@ -1,55 +1,31 @@
-import Navbar from "../components/Navbar";
+import { useEffect, useState } from "react";
 import { HeroContent } from "../components/HeroContent";
-import AboutUs from "../components/AboutUs";
-import Pricing from "../components/Princing";
 
 export default function HomePage() {
+  const [moduleStatus, setModuleStatus] = useState<string | null>(null);
 
-  // === Função que envia dados de teste para o servidor Java ===
-  async function enviarDadosTeste() {
-    const usuarioTeste = {
-      nome: "Teste " + Math.floor(Math.random() * 1000),
-      idade: Math.floor(Math.random() * 80) + 10,
-      email: "teste" + Math.floor(Math.random() * 1000) + "@exemplo.com"
-    };
-
-    console.log("Enviando:", usuarioTeste);
-
-    try {
-      const resposta = await fetch("http://localhost:8080/api/usuario", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(usuarioTeste)
-      });
-
-      const data = await resposta.json();
-      console.log("Resposta do servidor:", data);
-      alert("Servidor respondeu: " + data.mensagem);
-
-    } catch (error) {
-      console.error("Erro ao enviar:", error);
-      alert("Erro ao conectar ao servidor Java.");
+  useEffect(() => {
+    const status = sessionStorage.getItem("kodarys-module-status");
+    if (status) {
+      setModuleStatus(status);
+      sessionStorage.removeItem("kodarys-module-status");
     }
-  }
+  }, []);
 
   return (
     <>
-      <div className="main-content">
-        <Navbar />
+      <div className="main-content relative">
+  
+        
+        {moduleStatus === 'concluido' && (
+          <div className="absolute top-24 left-0 w-full z-50 flex justify-center px-4">
+            <div className="bg-green-600/90 backdrop-blur text-white font-semibold px-6 py-3 rounded-lg shadow-[0_0_20px_rgba(34,197,94,0.5)] border border-green-400">
+              \u2728 Modulo concluido! Progresso salvo no grimório.
+            </div>
+          </div>
+        )}
         <HeroContent />
-
-        {/* 🔵 Botão de teste */}
-        <div className="!p-4 text-center">
-          <button onClick={enviarDadosTeste} className="text-white bg-blue-600 rounded-lg mt-4 !px-9 !py-4 cursor-pointer hover:bg-blue-700 hover:shadow-md hover:shadow-blue-800">
-            🔧 Enviar dados de teste para o servidor Java
-          </button>
-        </div>
       </div>
-
-      <main>
-        <AboutUs />
-        <Pricing />
-      </main>
     </>
   );
 }

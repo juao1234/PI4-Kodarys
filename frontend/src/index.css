@@ -5,40 +5,57 @@
   font-family: 'Merriweather', serif;
   line-height: 1.5;
   font-weight: 400;
-
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  background-color: #050508; /* Cor de fundo de seguran�a */
 }
 
-.main-content{
-  height: 100vh;
+/* Garante que o html/body ocupem tudo */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.main-content {
   width: 100%;
+  /* MUDAN�A CR�TICA: min-height permite que o fundo cres�a com o conte�do */
+  min-height: 100vh; 
+  
+  /* Imagem de fundo */
+  background-image: url(/homepage.png);
   background-size: cover;
-  background-position: center;
-  background-image: linear-gradient(rgba(0,0,0,.5), rgba(0,0,0,.5) ), url(/homepage.png);
+  background-position: center center;
+  
+  /* MUDAN�A CR�TICA: fixed faz a imagem ficar "presa" na tela enquanto o texto rola por cima */
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  
+  position: relative;
 }
 
-a{
+.hidden {
+  display: none;
+}
+
+a {
   text-decoration: none;
   transition: color .3s ease;
 }
 
-a:hover{
-  /* ISSO FUNCIONA PAR APLICAR ESTILOS DO TAILWIND EM TAGS HTML DIRETAMENTE */
-  @apply text-blue-300
+a:hover {
+  color: #93c5fd; /* Mesmo tom do utilitário text-blue-300 sem depender de @apply */
 }
 
-
-h1,h2,h3,h4,h5,h6,p,button,input,label{
+h1, h2, h3, h4, h5, h6, p, button, input, label {
   font-family: 'Merriweather', serif !important;
 }
 
-p{
-  font-family: 'Merriweather', serif !important;
+/* O c�digo abaixo � necess�rio para a anima��o que criamos no HeroContent */
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+.animate-float {
+    animation: float 4s ease-in-out infinite;
 }

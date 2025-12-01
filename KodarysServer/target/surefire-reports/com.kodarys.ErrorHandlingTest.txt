@@ -1,20 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.kodarys.ErrorHandlingTest
 -------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.713 s <<< FAILURE! -- in com.kodarys.ErrorHandlingTest
-com.kodarys.ErrorHandlingTest.slowClientThatSendsNothingTimesOut -- Time elapsed: 0.068 s <<< ERROR!
-java.net.ConnectException: Connection refused: connect
-	at java.base/sun.nio.ch.Net.connect0(Native Method)
-	at java.base/sun.nio.ch.Net.connect(Net.java:535)
-	at java.base/sun.nio.ch.Net.connect(Net.java:524)
-	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:574)
-	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:282)
-	at java.base/java.net.Socket.connect(Socket.java:665)
-	at java.base/java.net.Socket.connect(Socket.java:603)
-	at java.base/java.net.Socket.<init>(Socket.java:470)
-	at java.base/java.net.Socket.<init>(Socket.java:276)
-	at com.kodarys.ErrorHandlingTest.slowClientThatSendsNothingTimesOut(ErrorHandlingTest.java:56)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
-
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec
