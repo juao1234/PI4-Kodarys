@@ -1,9 +1,8 @@
 package com.kodarys.model;
 
-/**
- * Model simples para um diálogo visto na narrativa.
- * Campos básicos: texto, persona e timestamp (epoch millis).
- */
+//Modelo simples para um diálogo visto na narrativa. Campos básicos: texto, persona e timestamp (epoch millis).
+
+
 public class Dialogo {
     private String texto;
     private String persona;

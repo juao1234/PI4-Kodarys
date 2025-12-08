@@ -1,3 +1,4 @@
+//Não usamos mais esse modelo, mas deixamos aqui para referência futura
 package com.kodarys.model;
 
 import java.util.ArrayList;
