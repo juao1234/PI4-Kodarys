@@ -22,6 +22,9 @@ public class HttpToTcpServer {
     private static final String TCP_HOST = "localhost";
     private static final int TCP_PORT = 5000;
 
+    /**
+     * Método principal que inicia o servidor HTTP e define os endpoints.
+     */
     public static void main(String[] args) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress(HTTP_PORT), 0);
         System.out.println("Adaptador HTTP para TCP rodando na porta " + HTTP_PORT + "...");
@@ -43,6 +46,10 @@ public class HttpToTcpServer {
 
     // ---------------------- CRUD/Evento via POST ----------------------
 
+    /**
+     * Handler para requisições de usuário e eventos (POST).
+     * Recebe JSON do frontend, encaminha para o TCP e retorna a resposta.
+     */
     private static void handleUsuario(HttpExchange exchange) throws IOException {
         try {
             String method = exchange.getRequestMethod();
@@ -92,6 +99,10 @@ public class HttpToTcpServer {
 
     // ---------------------- Progresso via GET ----------------------
 
+    /**
+     * Handler para busca de progresso (GET).
+     * Extrai userId da query string e consulta o servidor TCP.
+     */
     private static void handleProgresso(HttpExchange exchange) throws IOException {
         try {
             String method = exchange.getRequestMethod();
@@ -141,6 +152,9 @@ public class HttpToTcpServer {
 
     // ---------------------- Fala com o servidor TCP ----------------------
 
+    /**
+     * Conecta ao servidor TCP, envia a string JSON e aguarda a resposta.
+     */
     private static String enviarParaServidorTCP(String json) throws IOException {
         try (Socket socket = new Socket(TCP_HOST, TCP_PORT)) {
             System.out.println("Conectado ao servidor TCP " + TCP_HOST + ":" + TCP_PORT);

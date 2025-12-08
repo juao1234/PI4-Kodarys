@@ -10,6 +10,7 @@ import com.google.gson.annotations.SerializedName;
 /**
  * Model simples para representar uma tentativa (registro no historico_missoes).
  * Utiliza SerializedName para mapear nomes em snake_case do JSON recebido.
+ * (Não usamos mais esse modelo ativamente na lógica principal, mas mantido para referência).
  */
 public class HistoricoMissao {
     @SerializedName("id_usuario")

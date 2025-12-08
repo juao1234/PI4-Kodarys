@@ -1,6 +1,8 @@
 package com.kodarys.model;
 
-//Classe modelo com informações para verificar se chegaram do React os dados de um usuário (cadastro/login).
+/**
+ * Classe modelo com informações para verificar se chegaram do React os dados de um usuário (cadastro/login).
+ */
 public class Usuario {
     private String nome;
     private Integer idade;   
